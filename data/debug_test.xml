@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<whatsapp_data xmlns="http://whatsapp.clone/data" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://whatsapp.clone/data schemas/whatsapp_data.xsd">
+    <users><user id="test1"><name>Test User</name><email>test@example.com</email><status>active</status><settings/></user><user id="test1"><name>Test User</name><email>test@example.com</email><status>active</status><settings/></user><user id="test1"><name>Test User</name><email>test@example.com</email><status>active</status><settings/></user><user id="test1"><name>Test User</name><email>test@example.com</email><status>active</status><settings/></user></users>
+    <contacts/>
+    <groups/>
+    <messages/>
+</whatsapp_data>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="vendor/autoload.php"
+         colors="true"
+         verbose="true"
+         testdox="true"
+         stopOnFailure="false">
+    
+    <testsuites>
+        <testsuite name="WhatsApp HTTP Tests">
+            <file>tests/SimpleHttpTest.php</file>
+        </testsuite>
+        <testsuite name="WhatsApp Selenium Tests">
+            <file>tests/WhatsAppAutomatedTest.php</file>
+        </testsuite>
+    </testsuites>
+    
+    <php>
+        <env name="TEST_SERVER_HOST" value="localhost"/>
+        <env name="TEST_SERVER_PORT" value="8000"/>
+        <env name="TEST_SELENIUM_HUB" value="http://localhost:4444/wd/hub"/>
+    </php>
+    
+    <logging>
+        <log type="testdox-text" target="test-results.txt"/>
+    </logging>
+    
+</phpunit> 

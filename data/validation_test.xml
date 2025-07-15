@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<whatsapp_data xmlns="http://whatsapp.clone/data"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="http://whatsapp.clone/data C:\Users\ASUS TUF\OneDrive\Bureau\xml_project\schemas\whatsapp_data.xsd">
+    <users></users>
+    <contacts></contacts>
+    <groups></groups>
+    <messages></messages>
+</whatsapp_data>
