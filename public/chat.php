@@ -74,40 +74,7 @@ if ($contactId) {
     }
 }
 
-// Gestion de l'envoi de messages
-if ($_POST && isset($_POST['action']) && $_POST['action'] === 'send_message') {
-    $content = trim($_POST['content'] ?? '');
-    $type = $_POST['type'] ?? 'text';
-    
-    if (empty($content)) {
-        $error = "Le message ne peut pas être vide";
-    } elseif (!$activeConversation) {
-        $error = "Aucune conversation sélectionnée";
-    } else {
-        try {
-            if ($conversationType === 'contact') {
-                // Message privé
-                $messageService->sendPrivateMessage(
-                    $_SESSION['user_id'],
-                    $activeConversation->getContactUserId(),
-                    $content,
-                    $type
-                );
-            } else {
-                // Message de groupe
-                $messageService->sendGroupMessage(
-                    $_SESSION['user_id'],
-                    $activeConversation->getId(),
-                    $content,
-                    $type
-                );
-            }
-            $success = "Message envoyé";
-        } catch (Exception $e) {
-            $error = "Erreur lors de l'envoi : " . $e->getMessage();
-        }
-    }
-}
+// Traitement POST supprimé - Les messages sont maintenant envoyés uniquement via AJAX
 
 // Récupération des conversations et messages
 $contacts = [];
@@ -398,17 +365,17 @@ try {
                             </div>
                         <?php endif; ?>
                         
-                        <form method="POST" id="chat-form" style="display: flex; gap: 10px; width: 100%;">
-                            <input type="hidden" name="action" value="send_message">
-                            <input type="hidden" name="type" value="text">
+                        <form id="chat-form" style="display: flex; gap: 10px; width: 100%;">
                             <input type="hidden" id="conversation-id" value="<?= $conversationType ?>_<?= htmlspecialchars($activeConversation->getId()) ?>">
+                            
+                            <?php if ($conversationType === 'contact'): ?>
+                                <input type="hidden" id="recipient-id" value="<?= htmlspecialchars($activeConversation->getContactUserId()) ?>">
+                            <?php endif; ?>
                             
                             <input 
                                 type="text" 
-                                name="content" 
                                 id="message-input" 
                                 placeholder="Tapez votre message..."
-                                required
                                 style="flex: 1;"
                             >
                             
@@ -438,49 +405,7 @@ try {
             }
         });
 
-        // Soumission du formulaire de chat
-        document.getElementById('chat-form')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const messageInput = document.getElementById('message-input');
-            const content = messageInput.value.trim();
-            
-            if (!content) {
-                showAlert('Veuillez saisir un message', 'error');
-                return;
-            }
-            
-            // Créer un nouveau FormData pour préserver le contenu
-            const formData = new FormData();
-            formData.append('action', 'send_message');
-            formData.append('content', content);
-            formData.append('type', 'text');
-            
-            // Soumettre via POST classique
-            const form = this;
-            
-            // Créer un input hidden temporaire pour le contenu
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'content';
-            hiddenInput.value = content;
-            form.appendChild(hiddenInput);
-            
-            // Vider le champ d'interface immédiatement pour l'UX
-            messageInput.value = '';
-            
-            // Ajouter le message optimiste à l'interface
-            addMessageToChat({
-                content: content,
-                timestamp: new Date().toLocaleTimeString()
-            }, 'sent');
-            
-            const chatMessages = document.getElementById('chat-messages');
-            scrollToBottom(chatMessages);
-            
-            // Soumettre le formulaire
-            form.submit();
-        });
+        // Event listener supprimé - géré dans app.js pour éviter le double envoi
 
         // Initialiser la conversation active
         if (typeof resetCurrentConversation === 'function') {
@@ -502,4 +427,5 @@ try {
         });
     </script>
 </body>
+</html> 
 </html> 

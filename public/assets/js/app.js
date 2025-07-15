@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // GESTION FORMULAIRES
     // ===========================================
     
-    // Validation en temps réel des formulaires
-    const forms = document.querySelectorAll('form');
+    // Validation en temps réel des formulaires (sauf chat-form qui a sa propre validation)
+    const forms = document.querySelectorAll('form:not(#chat-form)');
     forms.forEach(form => {
         form.addEventListener('submit', function(e) {
             if (!validateForm(this)) {
@@ -106,30 +106,254 @@ function validateForm(form) {
     return isValid;
 }
 
+// Système d'alertes avec historique et mode debug
+const AlertManager = {
+    alerts: [],
+    debugMode: false,
+    freezeMode: false,  // Nouveau: mode congélation des alertes
+    persistentErrorCapture: true,  // Capture automatique des erreurs
+    
+    // Activer/désactiver le mode debug
+    toggleDebugMode: function() {
+        this.debugMode = !this.debugMode;
+        console.log(`Mode debug alertes: ${this.debugMode ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+        showDebugAlert(`Mode debug alertes ${this.debugMode ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`, 'info');
+    },
+    
+    // Activer/désactiver le mode freeze (alertes permanentes)
+    toggleFreezeMode: function() {
+        this.freezeMode = !this.freezeMode;
+        console.log(`Mode freeze alertes: ${this.freezeMode ? 'ACTIVÉ - Alertes permanentes' : 'DÉSACTIVÉ'}`);
+        showDebugAlert(`Mode freeze alertes ${this.freezeMode ? 'ACTIVÉ - Alertes permanentes' : 'DÉSACTIVÉ'}`, 'info');
+    },
+    
+    // Sauvegarder une alerte dans l'historique
+    saveAlert: function(message, type, timestamp = null) {
+        const alert = {
+            message: message,
+            type: type,
+            timestamp: timestamp || new Date().toISOString(),
+            id: Date.now() + Math.random()
+        };
+        
+        this.alerts.push(alert);
+        
+        // Garder seulement les 50 dernières alertes
+        if (this.alerts.length > 50) {
+            this.alerts.shift();
+        }
+        
+        return alert;
+    },
+    
+    // Afficher toutes les alertes dans la console
+    showHistory: function() {
+        console.log('=== HISTORIQUE DES ALERTES ===');
+        this.alerts.forEach((alert, index) => {
+            console.log(`${index + 1}. [${alert.type.toUpperCase()}] ${alert.timestamp} - ${alert.message}`);
+        });
+    },
+    
+    // Exporter l'historique
+    exportHistory: function() {
+        const alertsText = this.alerts.map(alert => 
+            `[${alert.timestamp}] [${alert.type.toUpperCase()}] ${alert.message}`
+        ).join('\n');
+        
+        const blob = new Blob([alertsText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `alerts_history_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
+    
+    // Vider l'historique
+    clearHistory: function() {
+        this.alerts = [];
+        console.log('Historique des alertes vidé');
+    },
+    
+    // Nettoyer toutes les alertes visibles à l'écran
+    clearAllAlerts: function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => alert.remove());
+        console.log('Toutes les alertes visibles supprimées');
+    },
+    
+    // Sauvegarder une alerte dans localStorage pour survivre aux rechargements
+    savePersistentAlert: function(message, type, timestamp) {
+        if (!this.persistentErrorCapture) return;
+        
+        const persistentAlerts = JSON.parse(localStorage.getItem('whatsapp_persistent_alerts') || '[]');
+        const alert = {
+            message: message,
+            type: type,
+            timestamp: timestamp,
+            id: Date.now() + Math.random(),
+            url: window.location.href
+        };
+        
+        persistentAlerts.push(alert);
+        
+        // Garder seulement les 20 dernières alertes persistantes
+        if (persistentAlerts.length > 20) {
+            persistentAlerts.shift();
+        }
+        
+        localStorage.setItem('whatsapp_persistent_alerts', JSON.stringify(persistentAlerts));
+    },
+    
+    // Afficher les alertes sauvegardées au rechargement
+    showPersistentAlerts: function() {
+        const persistentAlerts = JSON.parse(localStorage.getItem('whatsapp_persistent_alerts') || '[]');
+        if (persistentAlerts.length === 0) return;
+        
+        // Créer une section spéciale pour les alertes persistantes
+        const persistentSection = document.createElement('div');
+        persistentSection.id = 'persistent-alerts-section';
+        persistentSection.innerHTML = `
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 10px 0; border-radius: 4px;">
+                <h4 style="margin: 0 0 10px 0; color: #856404;">
+                    🔄 Alertes Récupérées (${persistentAlerts.length})
+                    <button onclick="AlertManager.clearPersistentAlerts()" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                        🗑️ Effacer
+                    </button>
+                </h4>
+                <div id="persistent-alerts-content"></div>
+            </div>
+        `;
+        
+        const container = document.querySelector('.content-body') || document.body;
+        container.insertBefore(persistentSection, container.firstChild);
+        
+        // Afficher chaque alerte persistante
+        const content = document.getElementById('persistent-alerts-content');
+        persistentAlerts.forEach(alert => {
+            const alertDiv = document.createElement('div');
+            alertDiv.style.cssText = `
+                background: ${alert.type === 'error' ? '#f8d7da' : alert.type === 'success' ? '#d4edda' : '#d1ecf1'};
+                color: ${alert.type === 'error' ? '#721c24' : alert.type === 'success' ? '#155724' : '#0c5460'};
+                border: 1px solid ${alert.type === 'error' ? '#f5c6cb' : alert.type === 'success' ? '#c3e6cb' : '#b8daff'};
+                padding: 8px 12px;
+                margin: 5px 0;
+                border-radius: 4px;
+                font-size: 13px;
+                border-left: 4px solid #ff6b6b;
+            `;
+            
+            const timeAgo = this.getTimeAgo(alert.timestamp);
+            alertDiv.innerHTML = `
+                <strong>${alert.type === 'error' ? '❌' : alert.type === 'success' ? '✅' : '💡'}</strong>
+                ${alert.message}
+                <div style="font-size: 11px; opacity: 0.7; margin-top: 5px;">
+                    ⏰ ${timeAgo} | 📍 ${alert.url}
+                </div>
+            `;
+            content.appendChild(alertDiv);
+        });
+        
+        console.log(`📋 ${persistentAlerts.length} alertes persistantes récupérées`);
+    },
+    
+    // Vider les alertes persistantes
+    clearPersistentAlerts: function() {
+        localStorage.removeItem('whatsapp_persistent_alerts');
+        const section = document.getElementById('persistent-alerts-section');
+        if (section) section.remove();
+        console.log('Alertes persistantes effacées');
+    },
+    
+    // Calculer le temps écoulé depuis une alerte
+    getTimeAgo: function(timestamp) {
+        const now = new Date();
+        const alertTime = new Date(timestamp);
+        const diffMs = now - alertTime;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        
+        if (diffMins < 1) return 'Il y a moins d\'une minute';
+        if (diffMins < 60) return `Il y a ${diffMins} minute${diffMins > 1 ? 's' : ''}`;
+        if (diffHours < 24) return `Il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
+        return `Il y a ${Math.floor(diffHours / 24)} jour${Math.floor(diffHours / 24) > 1 ? 's' : ''}`;
+    }
+};
+
 /**
- * Affiche une alerte
+ * Affiche une alerte (VERSION AMÉLIORÉE AVEC DEBUG)
  */
 function showAlert(message, type = 'info', persistent = false) {
+    const timestamp = new Date().toISOString();
+    
+    // Sauvegarder dans l'historique
+    AlertManager.saveAlert(message, type, timestamp);
+    
+    // Sauvegarder dans localStorage pour survivre aux rechargements
+    AlertManager.savePersistentAlert(message, type, timestamp);
+    
+    // Log dans la console
     console.log(`[ALERT] ${type.toUpperCase()}: ${message}`);
+    
+    // Si mode freeze, rendre l'alerte permanente
+    if (AlertManager.freezeMode) {
+        persistent = true;
+        message = `[FREEZE] ${message} | ${timestamp}`;
+    }
+    // Si mode debug, faire l'alerte persistante et ajouter des infos
+    else if (AlertManager.debugMode) {
+        persistent = true;
+        message = `[DEBUG] ${message} | ${timestamp}`;
+    }
     
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
+    alertDiv.style.cssText = `
+        background: ${type === 'error' ? '#f8d7da' : type === 'success' ? '#d4edda' : '#d1ecf1'};
+        color: ${type === 'error' ? '#721c24' : type === 'success' ? '#155724' : '#0c5460'};
+        border: 1px solid ${type === 'error' ? '#f5c6cb' : type === 'success' ? '#c3e6cb' : '#b8daff'};
+        padding: 10px 15px;
+        margin: 10px 0;
+        border-radius: 4px;
+        position: relative;
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+        ${AlertManager.freezeMode ? 'border-left: 5px solid #ff6b6b; box-shadow: 0 0 10px rgba(255,107,107,0.3);' : ''}
+    `;
+    
     alertDiv.innerHTML = `
-        <strong>${type === 'error' ? 'Erreur' : type === 'success' ? 'Succès' : 'Information'}</strong>
-        ${message}
-        ${persistent ? '<button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; font-size: 16px; cursor: pointer;">×</button>' : ''}
+        <strong>${type === 'error' ? '❌ Erreur' : type === 'success' ? '✅ Succès' : '💡 Information'}</strong>
+        <br>${message}
+        <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; font-size: 16px; cursor: pointer; position: absolute; top: 5px; right: 10px;">×</button>
+        ${AlertManager.freezeMode ? '<div style="font-size: 10px; margin-top: 5px; opacity: 0.7; color: #ff6b6b; font-weight: bold;">❄️ Mode Freeze - Alerte permanente</div>' : ''}
+        ${AlertManager.debugMode && !AlertManager.freezeMode ? '<div style="font-size: 10px; margin-top: 5px; opacity: 0.7;">Mode Debug - Alerte longue durée</div>' : ''}
     `;
     
     const container = document.querySelector('.content-body') || document.body;
     container.insertBefore(alertDiv, container.firstChild);
     
-    // Auto-hide après 15 secondes, sauf si persistent
+    // Auto-hide après délai variable selon le mode
     if (!persistent) {
-    setTimeout(() => {
+        // Durées augmentées: 30s en debug, 8s normal
+        const hideDelay = AlertManager.debugMode ? 30000 : 8000; // 30s en debug, 8s normal
+        setTimeout(() => {
             alertDiv.style.transition = 'opacity 0.5s ease-out';
-        alertDiv.style.opacity = '0';
+            alertDiv.style.opacity = '0';
             setTimeout(() => alertDiv.remove(), 500);
-        }, 15000); // Augmenté à 15 secondes pour une meilleure lisibilité
+        }, hideDelay);
+    }
+    
+    // Ajouter animation CSS si pas déjà présente
+    if (!document.getElementById('alert-styles')) {
+        const style = document.createElement('style');
+        style.id = 'alert-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateY(-20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
     }
 }
 
@@ -207,20 +431,154 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Exposer les outils de debug globalement
+window.AlertManager = AlertManager;
+window.Logger = Logger;
+window.showDebugPanel = showDebugPanel;
+
+// Système de capture automatique des erreurs JavaScript
+window.addEventListener('error', function(event) {
+    const errorMessage = `Erreur JavaScript: ${event.message} (${event.filename}:${event.lineno})`;
+    console.error('❌ Erreur capturée:', errorMessage);
+    
+    // Sauvegarder l'erreur automatiquement
+    AlertManager.savePersistentAlert(errorMessage, 'error', new Date().toISOString());
+    
+    // Afficher l'erreur si on est sur la page
+    if (AlertManager.debugMode || AlertManager.freezeMode) {
+        showAlert(errorMessage, 'error');
+    }
+});
+
+// Capture des erreurs de promesses non gérées
+window.addEventListener('unhandledrejection', function(event) {
+    const errorMessage = `Promesse rejetée: ${event.reason}`;
+    console.error('❌ Promesse rejetée capturée:', errorMessage);
+    
+    // Sauvegarder l'erreur automatiquement
+    AlertManager.savePersistentAlert(errorMessage, 'error', new Date().toISOString());
+    
+    // Afficher l'erreur si on est sur la page
+    if (AlertManager.debugMode || AlertManager.freezeMode) {
+        showAlert(errorMessage, 'error');
+    }
+});
+
+// Afficher les alertes persistantes au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Attendre un peu pour que le DOM soit complètement chargé
+    setTimeout(() => {
+        AlertManager.showPersistentAlerts();
+    }, 1000);
+});
+
+// Afficher un message au démarrage
+console.log('🔧 WhatsApp Debug Tools chargés !');
+console.log('📋 Commandes disponibles :');
+console.log('  - AlertManager.toggleDebugMode() : Activer/désactiver le mode debug alertes (30s durée)');
+console.log('  - AlertManager.toggleFreezeMode() : Activer/désactiver le mode freeze (alertes permanentes)');
+console.log('  - AlertManager.showHistory() : Afficher l\'historique des alertes');
+console.log('  - AlertManager.exportHistory() : Exporter l\'historique');
+console.log('  - AlertManager.clearAllAlerts() : Nettoyer toutes les alertes à l\'écran');
+console.log('  - AlertManager.showPersistentAlerts() : Afficher les alertes sauvegardées');
+console.log('  - AlertManager.clearPersistentAlerts() : Effacer les alertes sauvegardées');
+console.log('  - Logger.showHistory() : Afficher l\'historique des logs');
+console.log('  - showDebugPanel() : Ouvrir le panneau de debug');
+console.log('  - F12 ou Ctrl+Shift+D : Ouvrir le panneau de debug');
+console.log('');
+console.log('💡 Nouvelles Fonctionnalités :');
+console.log('  • Capture automatique des erreurs JavaScript');
+console.log('  • Sauvegarde persistante dans localStorage');
+console.log('  • Récupération des alertes après rechargement');
+console.log('  • Mode Debug = Alertes de 30s avec informations détaillées');
+console.log('  • Mode Freeze = Alertes permanentes jusqu\'à fermeture manuelle');
+console.log('  • Les alertes freeze ont une bordure rouge et l\'icône ❄️');
+console.log('  • Utilisez clearAllAlerts() pour nettoyer l\'écran rapidement');
+
 function showDebugPanel() {
     const debugPanel = document.createElement('div');
     debugPanel.id = 'debug-panel';
     debugPanel.innerHTML = `
-        <div style="position: fixed; top: 10px; right: 10px; width: 400px; max-height: 500px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="position: fixed; top: 10px; right: 10px; width: 450px; max-height: 600px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <div style="background: #007bff; color: white; padding: 10px; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
                 <span>🔧 Debug Panel</span>
                 <button onclick="document.getElementById('debug-panel').remove()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer;">×</button>
             </div>
-            <div style="padding: 15px; max-height: 400px; overflow-y: auto;">
-                <button onclick="Logger.clearLogs(); showDebugAlert('Logs cleared', 'info')" style="margin-bottom: 10px; padding: 5px 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Clear Logs</button>
-                <button onclick="Logger.exportLogs()" style="margin-bottom: 10px; margin-left: 5px; padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Export Logs</button>
-                <div id="debug-logs" style="background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
-                    ${Logger.getLogs().map(log => `<div style="margin-bottom: 5px; ${log.level === 'ERROR' ? 'color: red;' : log.level === 'SUCCESS' ? 'color: green;' : ''}"><strong>[${log.level}]</strong> ${log.message}</div>`).join('')}
+            <div style="padding: 15px; max-height: 500px; overflow-y: auto;">
+                
+                <!-- Section Alertes -->
+                <div style="margin-bottom: 20px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+                    <h5 style="margin: 0 0 10px 0; color: #856404;">🚨 Alertes</h5>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;">
+                        <button onclick="AlertManager.toggleDebugMode()" style="padding: 3px 8px; background: ${AlertManager.debugMode ? '#dc3545' : '#28a745'}; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            ${AlertManager.debugMode ? '⏸️ Désactiver' : '▶️ Activer'} Mode Debug
+                        </button>
+                        <button onclick="AlertManager.toggleFreezeMode()" style="padding: 3px 8px; background: ${AlertManager.freezeMode ? '#dc3545' : '#ff6b6b'}; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            ${AlertManager.freezeMode ? '🔥 Désactiver' : '❄️ Activer'} Mode Freeze
+                        </button>
+                        <button onclick="AlertManager.showHistory()" style="padding: 3px 8px; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            📜 Voir Historique
+                        </button>
+                        <button onclick="AlertManager.exportHistory()" style="padding: 3px 8px; background: #17a2b8; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            💾 Exporter
+                        </button>
+                        <button onclick="AlertManager.clearHistory()" style="padding: 3px 8px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            🗑️ Vider Historique
+                        </button>
+                        <button onclick="AlertManager.clearAllAlerts()" style="padding: 3px 8px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            🧹 Nettoyer Écran
+                        </button>
+                    </div>
+                    <div style="font-size: 11px; color: #856404;">
+                        Alertes enregistrées: <strong>${AlertManager.alerts.length}</strong> | 
+                        Mode debug: <strong>${AlertManager.debugMode ? 'ACTIVÉ (30s)' : 'DÉSACTIVÉ'}</strong> | 
+                        Mode freeze: <strong>${AlertManager.freezeMode ? 'ACTIVÉ (permanent)' : 'DÉSACTIVÉ'}</strong>
+                    </div>
+                </div>
+                
+                <!-- Section Alertes Persistantes -->
+                <div style="margin-bottom: 20px; padding: 10px; background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px;">
+                    <h5 style="margin: 0 0 10px 0; color: #0c5460;">💾 Alertes Persistantes (Survivent aux rechargements)</h5>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;">
+                        <button onclick="AlertManager.showPersistentAlerts()" style="padding: 3px 8px; background: #17a2b8; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            🔄 Afficher Sauvegardées
+                        </button>
+                        <button onclick="AlertManager.clearPersistentAlerts()" style="padding: 3px 8px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                            🗑️ Effacer Sauvegardées
+                        </button>
+                    </div>
+                    <div style="font-size: 11px; color: #0c5460;">
+                        Alertes persistantes: <strong>${JSON.parse(localStorage.getItem('whatsapp_persistent_alerts') || '[]').length}</strong> | 
+                        Capture auto: <strong>${AlertManager.persistentErrorCapture ? 'ACTIVÉE' : 'DÉSACTIVÉE'}</strong>
+                    </div>
+                </div>
+                
+                <!-- Section Logs -->
+                <div style="margin-bottom: 20px;">
+                    <h5 style="margin: 0 0 10px 0; color: #495057;">📋 Logs</h5>
+                    <div style="margin-bottom: 10px;">
+                        <button onclick="Logger.clearLogs(); showDebugAlert('Logs cleared', 'info')" style="padding: 5px 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear Logs</button>
+                        <button onclick="Logger.exportLogs()" style="margin-left: 5px; padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Export Logs</button>
+                    </div>
+                    <div id="debug-logs" style="background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 11px; max-height: 250px; overflow-y: auto;">
+                        ${Logger.getLogs().map(log => `<div style="margin-bottom: 3px; ${log.level === 'ERROR' ? 'color: red;' : log.level === 'SUCCESS' ? 'color: green;' : ''}"><strong>[${log.level}]</strong> ${log.message}</div>`).join('')}
+                    </div>
+                </div>
+                
+                <!-- Section Contrôles -->
+                <div style="margin-bottom: 10px; padding: 10px; background: #e9ecef; border-radius: 4px;">
+                    <h5 style="margin: 0 0 10px 0; color: #495057;">⚙️ Contrôles</h5>
+                    <button onclick="showAlert('Test d\\'alerte normal', 'info')" style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">Test Info</button>
+                    <button onclick="showAlert('Test d\\'alerte succès', 'success')" style="padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">Test Success</button>
+                    <button onclick="showAlert('Test d\\'alerte erreur', 'error')" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Test Error</button>
+                </div>
+                
+                <!-- Instructions -->
+                <div style="font-size: 11px; color: #6c757d; padding: 10px; background: #f8f9fa; border-radius: 4px; margin-top: 10px;">
+                    <strong>Instructions:</strong><br>
+                    • <kbd>F12</kbd> ou <kbd>Ctrl+Shift+D</kbd> pour ouvrir/fermer ce panneau<br>
+                    • Mode debug alertes: rend toutes les alertes persistantes<br>
+                    • Historique: conserve les 50 dernières alertes
                 </div>
             </div>
         </div>
@@ -260,17 +618,28 @@ function sendMessage() {
         conversationId: conversationId ? conversationId.value : 'MANQUANT'
     });
     
-    if (!messageInput.value.trim()) {
+    // Validation unifiée du message
+    const content = messageInput.value.trim();
+    if (!content) {
         Logger.error('Message vide');
         showAlert('Veuillez saisir un message', 'error');
+        messageInput.focus();
         return;
+    }
+    
+    // Désactiver le bouton d'envoi pendant l'envoi
+    const submitButton = document.querySelector('#chat-form button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = '...';
     }
     
     const formData = new FormData();
     formData.append('action', 'send_message');
-    formData.append('content', messageInput.value);
+    formData.append('content', content);
+    formData.append('type', 'text');
     
-    Logger.debug('Contenu du message', { content: messageInput.value });
+    Logger.debug('Contenu du message', { content: content });
     
     // Pour les conversations privées, utiliser recipient_id
     if (recipientId && recipientId.value) {
@@ -286,7 +655,8 @@ function sendMessage() {
     }
     else {
         Logger.error('Destinataire non spécifié');
-        showAlert('Destinataire non spécifié', 'error');
+        showAlert('Erreur: Destinataire non spécifié', 'error');
+        enableSubmitButton();
         return;
     }
     
@@ -298,6 +668,9 @@ function sendMessage() {
     })
     .then(response => {
         Logger.debug('Réponse reçue', { status: response.status, statusText: response.statusText });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         return response.json();
     })
     .then(data => {
@@ -309,17 +682,31 @@ function sendMessage() {
             messageInput.value = '';
             scrollToBottom(chatMessages);
             Logger.success('Message envoyé avec succès');
-            showAlert('Message envoyé', 'success');
+            
+            // Message de succès plus discret
+            console.log('✅ Message envoyé avec succès');
         } else {
             Logger.error('Erreur lors de l\'envoi', data);
-            showAlert(data.error || 'Erreur lors de l\'envoi', 'error');
+            showAlert(data.error || 'Erreur lors de l\'envoi du message', 'error');
         }
     })
     .catch(error => {
         Logger.error('Erreur de connexion', error);
-        console.error('Erreur:', error);
-        showAlert('Erreur de connexion', 'error');
+        console.error('❌ Erreur:', error);
+        showAlert('Erreur de connexion au serveur', 'error');
+    })
+    .finally(() => {
+        enableSubmitButton();
     });
+}
+
+// Fonction utilitaire pour réactiver le bouton d'envoi
+function enableSubmitButton() {
+    const submitButton = document.querySelector('#chat-form button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = '➤';
+    }
 }
 
 /**
@@ -331,13 +718,36 @@ function addMessageToChat(messageData, type = 'received') {
     
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
-    messageDiv.innerHTML = `
-        <div class="message-content">${escapeHtml(messageData.content)}</div>
-        <div class="message-time">${messageData.timestamp || new Date().toLocaleTimeString()}</div>
-    `;
+    
+    let messageHtml = '';
+    
+    // Afficher le nom de l'expéditeur pour les messages de groupe reçus
+    if (type === 'received' && messageData.sender_name && isGroupConversation()) {
+        messageHtml += `<div style="font-size: 12px; color: #00a884; margin-bottom: 5px;">${escapeHtml(messageData.sender_name)}</div>`;
+    }
+    
+    messageHtml += `<div class="message-content">${escapeHtml(messageData.content)}</div>`;
+    messageHtml += `<div class="message-time">${messageData.timestamp || new Date().toLocaleTimeString()}`;
+    
+    // Ajouter les indicateurs de statut pour les messages envoyés
+    if (type === 'sent') {
+        messageHtml += ` <span style="color: #00a884;">✓</span>`;
+    }
+    
+    messageHtml += `</div>`;
+    
+    messageDiv.innerHTML = messageHtml;
     
     chatMessages.appendChild(messageDiv);
     scrollToBottom(chatMessages);
+}
+
+/**
+ * Vérifie si la conversation actuelle est un groupe
+ */
+function isGroupConversation() {
+    const conversationId = document.getElementById('conversation-id');
+    return conversationId && conversationId.value && conversationId.value.startsWith('group_');
 }
 
 /**
@@ -436,29 +846,203 @@ setInterval(autoRefreshMessages, 3000);
 }
 
 /**
- * Gestion du modal de création de groupe
+ * Gestion du modal de création de groupe (VERSION AMÉLIORÉE)
  */
 function openGroupModal() {
+    console.log('Tentative d\'ouverture du modal...');
     const modal = document.getElementById('group-modal');
     if (modal) {
+        console.log('Modal trouvé dans le DOM');
+        
+        // Forcer l'affichage avec du CSS inline pour le debug
         modal.style.display = 'block';
+        modal.style.opacity = '1';
+        modal.style.zIndex = '9999';
+        modal.classList.add('active');
+        
+        console.log('Classes du modal:', modal.className);
+        console.log('Style du modal:', modal.style.cssText);
+        
+        // Ajouter la classe modal-content si elle n'existe pas
+        const modalContent = modal.querySelector('.modal-content');
+        if (!modalContent) {
+            const content = modal.querySelector('div');
+            if (content) {
+                content.classList.add('modal-content');
+            }
+        }
+        
+        console.log('Modal devrait être visible maintenant');
+    } else {
+        console.log('❌ Modal non trouvé dans le DOM');
     }
 }
 
 function closeGroupModal() {
+    console.log('Fermeture du modal...');
     const modal = document.getElementById('group-modal');
     if (modal) {
         modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.classList.remove('active');
+        console.log('Modal fermé');
     }
 }
 
 /**
- * Confirmation de suppression
+ * Fermer le modal en cliquant à l'extérieur
+ */
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('group-modal');
+    if (modal && event.target === modal) {
+        closeGroupModal();
+    }
+});
+
+/**
+ * Fermer le modal avec la touche Échap
+ */
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeGroupModal();
+    }
+});
+
+/**
+ * Amélioration de la validation des formulaires
+ */
+function validateForm(form) {
+    let isValid = true;
+    const requiredFields = form.querySelectorAll('[required]');
+    const emailFields = form.querySelectorAll('input[type="email"]');
+    
+    // Validation des champs requis
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('error');
+            showFieldError(field, 'Ce champ est requis');
+            isValid = false;
+        } else {
+            field.classList.remove('error');
+            hideFieldError(field);
+        }
+    });
+    
+    // Validation des emails
+    emailFields.forEach(field => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (field.value && !emailRegex.test(field.value)) {
+            field.classList.add('error');
+            showFieldError(field, 'Format d\'email invalide');
+            isValid = false;
+        } else if (field.value) {
+            field.classList.remove('error');
+            hideFieldError(field);
+        }
+    });
+    
+    return isValid;
+}
+
+/**
+ * Afficher une erreur sous un champ
+ */
+function showFieldError(field, message) {
+    hideFieldError(field); // Supprimer l'erreur existante
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'field-error';
+    errorDiv.style.cssText = `
+        color: var(--error-color);
+        font-size: 12px;
+        margin-top: 5px;
+        display: block;
+    `;
+    errorDiv.textContent = message;
+    
+    field.parentNode.appendChild(errorDiv);
+}
+
+/**
+ * Masquer l'erreur d'un champ
+ */
+function hideFieldError(field) {
+    const existingError = field.parentNode.querySelector('.field-error');
+    if (existingError) {
+        existingError.remove();
+    }
+}
+
+/**
+ * Amélioration de la soumission AJAX pour les groupes
+ */
+function submitGroupForm(form, action = 'add_member') {
+    const formData = new FormData(form);
+    formData.set('action', action);
+    
+    // Afficher un indicateur de chargement
+    // Le bouton submit est en dehors du formulaire, utiliser l'attribut form
+    const submitButton = document.querySelector('button[form="' + form.id + '"]') || form.querySelector('button[type="submit"]');
+    const originalText = submitButton ? submitButton.textContent : 'Ajouter';
+    if (submitButton) {
+        submitButton.textContent = 'Ajout en cours...';
+        submitButton.disabled = true;
+    }
+    
+    fetch('ajax.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            closeGroupModal();
+            // Recharger la page pour voir les changements
+            location.reload();
+        } else {
+            showAlert(data.error || 'Erreur lors de l\'ajout du membre', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showAlert('Erreur de connexion', 'error');
+    })
+    .finally(() => {
+        // Restaurer le bouton
+        if (submitButton) {
+            submitButton.textContent = originalText;
+            submitButton.disabled = false;
+        }
+    });
+}
+
+/**
+ * Confirmation de suppression améliorée
  */
 function confirmDelete(itemType, itemId, itemName) {
     if (confirm(`Êtes-vous sûr de vouloir supprimer ${itemType} "${itemName}" ?`)) {
-        // Redirection vers la page de suppression
-        window.location.href = `${itemType}s.php?action=delete&id=${itemId}`;
+        // Utiliser fetch pour la suppression
+        fetch(`${itemType}s.php?action=delete&id=${itemId}`, {
+            method: 'POST'
+        })
+        .then(response => response.text())
+        .then(data => {
+            if (data.includes('success') || data.includes('supprimé')) {
+                showAlert(`${itemType} "${itemName}" supprimé avec succès`, 'success');
+                // Supprimer l'élément du DOM
+                const element = document.querySelector(`[data-id="${itemId}"]`);
+                if (element) {
+                    element.remove();
+                }
+            } else {
+                showAlert('Erreur lors de la suppression', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showAlert('Erreur de connexion', 'error');
+        });
     }
 }
 
@@ -493,4 +1077,5 @@ function handleFileUpload() {
 }
 
 // Initialiser la gestion des uploads
+handleFileUpload(); 
 handleFileUpload(); 

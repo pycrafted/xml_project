@@ -43,8 +43,8 @@ $stats = [
 ];
 
 try {
-    $stats['contacts'] = count($contactRepo->findByUserId($_SESSION['user_id']));
-    $stats['groups'] = count($groupRepo->findByUserId($_SESSION['user_id']));
+    $stats['contacts'] = count($contactRepo->getContactsByUserId($_SESSION['user_id']));
+$stats['groups'] = count($groupRepo->getGroupsByUserId($_SESSION['user_id']));
     
     $userMessages = $messageRepo->findByUser($_SESSION['user_id']);
     foreach ($userMessages as $message) {

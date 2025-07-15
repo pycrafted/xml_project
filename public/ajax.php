@@ -18,11 +18,16 @@ session_start();
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 
-logInfo("AJAX Request", [
+// Fonction de logging simple
+function debugLog($message) {
+    file_put_contents('../logs/app.log', date('Y-m-d H:i:s') . " [DEBUG] " . $message . "\n", FILE_APPEND);
+}
+
+debugLog("AJAX Request: " . json_encode([
     'action' => $_GET['action'] ?? $_POST['action'] ?? 'unknown',
     'method' => $_SERVER['REQUEST_METHOD'],
     'user_id' => $_SESSION['user_id'] ?? 'anonymous'
-]);
+]));
 
 // Vérification de l'authentification
 if (!isset($_SESSION['user_id'])) {
@@ -51,40 +56,32 @@ try {
         // ===========================================
         
         case 'send_message':
-            logInfo("Send message request", [
-                'user_id' => $_SESSION['user_id'],
-                'content_length' => strlen($_POST['content'] ?? ''),
-                'recipient_id' => $_POST['recipient_id'] ?? '',
-                'type' => $_POST['type'] ?? 'text'
-            ]);
+                    debugLog("Send message request: " . json_encode([
+            'user_id' => $_SESSION['user_id'],
+            'content_length' => strlen($_POST['content'] ?? ''),
+            'recipient_id' => $_POST['recipient_id'] ?? '',
+            'type' => $_POST['type'] ?? 'text'
+        ]));
             
             $content = trim($_POST['content'] ?? '');
             $recipientId = $_POST['recipient_id'] ?? '';
             $type = $_POST['type'] ?? 'text';
             
             if (empty($content)) {
-                logWarning("Message vide", ['user_id' => $_SESSION['user_id']]);
+                debugLog("WARNING: Message vide - user_id: " . $_SESSION['user_id']);
                 throw new Exception('Le message ne peut pas être vide');
             }
             
             if (empty($recipientId)) {
-                logWarning("Destinataire non spécifié", ['user_id' => $_SESSION['user_id']]);
+                debugLog("WARNING: Destinataire non spécifié - user_id: " . $_SESSION['user_id']);
                 throw new Exception('Destinataire non spécifié');
             }
             
-            logDebug("Tentative d'envoi de message", [
-                'from' => $_SESSION['user_id'],
-                'to' => $recipientId,
-                'content' => substr($content, 0, 50) . '...'
-            ]);
+            debugLog("Tentative d'envoi de message - from: " . $_SESSION['user_id'] . " to: " . $recipientId . " content: " . substr($content, 0, 50) . '...');
             
             $message = $messageService->sendPrivateMessage($_SESSION['user_id'], $recipientId, $content, $type);
             
-            logSuccess("Message envoyé", [
-                'message_id' => $message->getId(),
-                'from' => $_SESSION['user_id'],
-                'to' => $recipientId
-            ]);
+            debugLog("SUCCESS: Message envoyé - message_id: " . $message->getId() . " from: " . $_SESSION['user_id'] . " to: " . $recipientId);
             
             echo json_encode([
                 'success' => true,
@@ -113,6 +110,15 @@ try {
             
             $message = $messageService->sendGroupMessage($_SESSION['user_id'], $groupId, $content, $type);
             
+            // Récupérer le nom de l'expéditeur pour les messages de groupe
+            $senderName = '';
+            try {
+                $sender = $userService->findUserById($_SESSION['user_id']);
+                $senderName = $sender ? $sender->getName() : 'Utilisateur inconnu';
+            } catch (Exception $e) {
+                $senderName = 'Utilisateur inconnu';
+            }
+            
             echo json_encode([
                 'success' => true,
                 'message' => [
@@ -121,7 +127,9 @@ try {
                     'type' => $type,
                     'timestamp' => date('Y-m-d H:i:s'),
                     'from_user_id' => $_SESSION['user_id'],
-                    'to_group_id' => $groupId
+                    'to_group_id' => $groupId,
+                    'sender_name' => $senderName,
+                    'is_sent' => true
                 ]
             ]);
             break;
@@ -172,7 +180,7 @@ try {
             // Formater les messages pour AJAX
             $formattedMessages = [];
             foreach ($messages as $message) {
-                $formattedMessages[] = [
+                $messageData = [
                     'id' => $message->getId(),
                     'content' => $message->getContent(),
                     'type' => $message->getType(),
@@ -180,6 +188,18 @@ try {
                     'from_user_id' => $message->getFromUserId(),
                     'is_sent' => ($message->getFromUserId() === $_SESSION['user_id'])
                 ];
+                
+                // Ajouter le nom de l'expéditeur pour les messages de groupe
+                if ($type === 'group' && !$messageData['is_sent']) {
+                    try {
+                        $sender = $userService->findUserById($message->getFromUserId());
+                        $messageData['sender_name'] = $sender ? $sender->getName() : 'Utilisateur inconnu';
+                    } catch (Exception $e) {
+                        $messageData['sender_name'] = 'Utilisateur inconnu';
+                    }
+                }
+                
+                $formattedMessages[] = $messageData;
             }
             
             echo json_encode([
@@ -287,6 +307,117 @@ try {
             break;
             
         // ===========================================
+        // GESTION DES GROUPES
+        // ===========================================
+        
+        case 'add_member':
+        case 'add_member_to_group':
+            $groupId = $_POST['group_id'] ?? '';
+            $contactId = $_POST['contact_id'] ?? '';
+            $userId = $_POST['user_id'] ?? '';
+            $role = $_POST['role'] ?? 'member';
+            
+            if (!$groupId) {
+                throw new Exception('ID du groupe requis');
+            }
+            
+            // Vérifier si l'utilisateur est admin du groupe
+            $isAdmin = $groupRepo->isUserAdminOfGroup($groupId, $_SESSION['user_id']);
+            if (!$isAdmin) {
+                throw new Exception('Seuls les administrateurs peuvent ajouter des membres');
+            }
+            
+            // Si on a un user_id directement, l'utiliser
+            if ($userId) {
+                $result = $groupRepo->addMemberToGroup($groupId, $userId, $role);
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Membre ajouté au groupe avec succès'
+                    ]);
+                } else {
+                    throw new Exception('Erreur lors de l\'ajout du membre (peut-être déjà membre du groupe)');
+                }
+            }
+            // Sinon, utiliser l'ancien système avec contact_id
+            elseif ($contactId) {
+                $contact = $contactRepo->getContactById($contactId);
+                if (!$contact) {
+                    throw new Exception('Contact non trouvé');
+                }
+                
+                $result = $groupRepo->addMemberToGroup($groupId, $contact->getContactUserId(), $role);
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Membre ajouté au groupe avec succès'
+                    ]);
+                } else {
+                    throw new Exception('Erreur lors de l\'ajout du membre (peut-être déjà membre du groupe)');
+                }
+            } else {
+                throw new Exception('ID du contact ou de l\'utilisateur requis');
+            }
+            break;
+            
+        case 'remove_member':
+        case 'remove_member_from_group':
+            $groupId = $_POST['group_id'] ?? '';
+            $memberId = $_POST['member_id'] ?? '';
+            
+            if (!$groupId || !$memberId) {
+                throw new Exception('ID du groupe et du membre requis');
+            }
+            
+            // Vérifier si l'utilisateur est admin du groupe
+            $isAdmin = $groupRepo->isUserAdminOfGroup($groupId, $_SESSION['user_id']);
+            if (!$isAdmin) {
+                throw new Exception('Seuls les administrateurs peuvent retirer des membres');
+            }
+            
+            $result = $groupRepo->removeMemberFromGroup($groupId, $memberId);
+            if ($result) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Membre retiré du groupe avec succès'
+                ]);
+            } else {
+                throw new Exception('Erreur lors de la suppression du membre');
+            }
+            break;
+            
+        case 'get_group_members':
+            $groupId = $_GET['group_id'] ?? '';
+            
+            if (!$groupId) {
+                throw new Exception('ID du groupe requis');
+            }
+            
+            $group = $groupRepo->getGroupById($groupId);
+            if (!$group) {
+                throw new Exception('Groupe non trouvé');
+            }
+            
+            $members = [];
+            foreach ($group->getMembers() as $userId => $role) {
+                $user = $userService->findUserById($userId);
+                if ($user) {
+                    $members[] = [
+                        'id' => $userId,
+                        'name' => $user->getName(),
+                        'email' => $user->getEmail(),
+                        'role' => $role
+                    ];
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'members' => $members
+            ]);
+            break;
+
+        // ===========================================
         // GESTION DES NOTIFICATIONS
         // ===========================================
         
@@ -388,14 +519,14 @@ try {
     }
     
 } catch (Exception $e) {
-    logError("AJAX Exception", [
+    debugLog("AJAX Exception: " . json_encode([
         'message' => $e->getMessage(),
         'file' => $e->getFile(),
         'line' => $e->getLine(),
         'trace' => $e->getTraceAsString(),
         'action' => $_GET['action'] ?? $_POST['action'] ?? 'unknown',
         'user_id' => $_SESSION['user_id'] ?? 'anonymous'
-    ]);
+    ]));
     
     http_response_code(400);
     echo json_encode([

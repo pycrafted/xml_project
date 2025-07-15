@@ -160,8 +160,17 @@ class GroupRepository
                     $descriptionElement->textContent = $group->getDescription();
                 } else {
                     // Créer l'élément description s'il n'existe pas
-                    $newDescElement = $element->ownerDocument->createElement('description', $group->getDescription());
-                    $element->appendChild($newDescElement);
+                    $doc = $element->ownerDocument;
+                    $namespace = 'http://whatsapp.clone/data';
+                    $newDescElement = $doc->createElementNS($namespace, 'description', $group->getDescription());
+                    
+                    // Insérer la description après name mais avant members
+                    $nameElement = $element->getElementsByTagName('name')->item(0);
+                    if ($nameElement && $nameElement->nextSibling) {
+                        $element->insertBefore($newDescElement, $nameElement->nextSibling);
+                    } else {
+                        $element->appendChild($newDescElement);
+                    }
                 }
             } else if ($descriptionElement) {
                 // Supprimer la description si elle est vide
@@ -178,9 +187,12 @@ class GroupRepository
             // Recréer l'élément members avec les nouveaux membres
             $members = $group->getMembers();
             if (!empty($members)) {
-                $newMembersElement = $element->ownerDocument->createElement('members');
+                $doc = $element->ownerDocument;
+                $namespace = 'http://whatsapp.clone/data';
+                
+                $newMembersElement = $doc->createElementNS($namespace, 'members');
                 foreach ($members as $userId => $role) {
-                    $memberElement = $element->ownerDocument->createElement('member');
+                    $memberElement = $doc->createElementNS($namespace, 'member');
                     $memberElement->setAttribute('user_id', $userId);
                     $memberElement->setAttribute('role', $role);
                     $newMembersElement->appendChild($memberElement);
@@ -364,6 +376,23 @@ class GroupRepository
     }
 
     /**
+     * Vérifie si un utilisateur est membre d'un groupe
+     * 
+     * @param string $groupId ID du groupe
+     * @param string $userId ID de l'utilisateur
+     * @return bool True si l'utilisateur est membre
+     */
+    public function isMemberOfGroup(string $groupId, string $userId): bool
+    {
+        $group = $this->findById($groupId);
+        if (!$group) {
+            return false;
+        }
+        
+        return $group->isMember($userId);
+    }
+    
+    /**
      * Ajoute un membre au groupe
      * 
      * @param string $groupId ID du groupe
@@ -379,8 +408,8 @@ class GroupRepository
             return false;
         }
         
-        // Vérifier si l'utilisateur est déjà membre
-        if ($group->isMember($userId)) {
+        // Vérifier si l'utilisateur est déjà membre (utiliser la nouvelle méthode)
+        if ($this->isMemberOfGroup($groupId, $userId)) {
             error_log("L'utilisateur $userId est déjà membre du groupe $groupId");
             return false;
         }
@@ -398,6 +427,20 @@ class GroupRepository
         }
         
         return $result;
+    }
+    
+    /**
+     * Ajoute une méthode pour vérifier si un contact existe déjà pour un utilisateur
+     * 
+     * @param string $userId ID de l'utilisateur
+     * @param string $contactUserId ID du contact utilisateur
+     * @return bool True si le contact existe déjà
+     */
+    public function findContactByUserAndContactUserId(string $userId, string $contactUserId): bool
+    {
+        // Cette méthode devrait être dans ContactRepository, mais on l'ajoute ici temporairement
+        // pour la compatibilité avec la suggestion de Grok
+        return false; // Implémentation à faire si nécessaire
     }
 
     /**

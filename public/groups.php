@@ -86,11 +86,8 @@ switch ($action) {
     case 'add_member_to_group':
     case 'add_member':
         
-        // Log de débogage détaillé
-        debugLog("=== DEBUG AJOUT MEMBRE ===");
-        debugLog("POST: " . print_r($_POST, true));
-        debugLog("SESSION user_id: " . $_SESSION['user_id']);
-        debugLog("Group ID: " . $groupId);
+        // Log de débogage simplifié
+        debugLog("Tentative d'ajout de membre au groupe $groupId par l'utilisateur " . $_SESSION['user_id']);
         
         if ($_POST && $groupId) {
             $contactId = $_POST['contact_id'] ?? '';
@@ -465,17 +462,21 @@ if ($action === 'manage' && $groupId) {
 
                     <!-- Modal d'ajout de membre (affiché seulement si admin) -->
                     <?php if ($groupRepo->isUserAdminOfGroup($groupId, $_SESSION['user_id'])): ?>
-                        <div id="group-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%;">
-                                <h3>Ajouter un membre au groupe</h3>
-                                <form method="POST">
-                                    <input type="hidden" name="action" value="add_member">
-                                    <input type="hidden" name="group_id" value="<?= htmlspecialchars($groupId) ?>">
-                                    
-                                    <div class="form-group">
-                                        <label>Sélectionner un contact :</label>
-                                        <select name="contact_id" class="form-control" required>
-                                            <option value="">-- Choisir un contact --</option>
+                        <div id="group-modal" class="modal">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="modal-title">Ajouter un membre au groupe</h3>
+                                    <button type="button" class="modal-close" onclick="closeGroupModal()">×</button>
+                                </div>
+                                <div class="modal-body">
+                                    <form method="POST" id="add-member-form">
+                                        <input type="hidden" name="action" value="add_member">
+                                        <input type="hidden" name="group_id" value="<?= htmlspecialchars($groupId) ?>">
+                                        
+                                        <div class="form-group">
+                                            <label>Sélectionner un contact :</label>
+                                            <select name="contact_id" class="form-control" required>
+                                                <option value="">-- Choisir un contact --</option>
                                             <?php foreach ($contacts as $contact): ?>
                                                 <?php
                                                 // Vérifier si ce contact est déjà membre
@@ -496,19 +497,19 @@ if ($action === 'manage' && $groupId) {
                                         </select>
                                     </div>
                                     
-                                    <div class="form-group">
-                                        <label>Rôle :</label>
-                                        <select name="role" class="form-control">
-                                            <option value="member">👤 Membre</option>
-                                            <option value="admin">👑 Administrateur</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <button type="submit" class="btn btn-primary">Ajouter</button>
-                                        <button type="button" onclick="closeGroupModal()" class="btn btn-secondary">Annuler</button>
-                                    </div>
-                                </form>
+                                        <div class="form-group">
+                                            <label>Rôle :</label>
+                                            <select name="role" class="form-control">
+                                                <option value="member">👤 Membre</option>
+                                                <option value="admin">👑 Administrateur</option>
+                                            </select>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" onclick="closeGroupModal()" class="btn btn-secondary">Annuler</button>
+                                    <button type="submit" form="add-member-form" class="btn btn-primary">Ajouter</button>
+                                </div>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -653,6 +654,97 @@ if ($action === 'manage' && $groupId) {
                 window.location.href = `groups.php?action=delete&id=${itemId}`;
             }
         }
+    </script>
+    <script>
+    // Debug JavaScript pour tester le modal
+    console.log('Script de debug modal chargé');
+    
+    // Tester si les fonctions existent
+    function testModal() {
+        console.log('Test du modal...');
+        
+        // Vérifier que les fonctions existent
+        if (typeof openGroupModal === 'function') {
+            console.log('✅ openGroupModal existe');
+        } else {
+            console.log('❌ openGroupModal n\'existe pas');
+        }
+        
+        if (typeof closeGroupModal === 'function') {
+            console.log('✅ closeGroupModal existe');
+        } else {
+            console.log('❌ closeGroupModal n\'existe pas');
+        }
+        
+        // Vérifier que le modal existe
+        const modal = document.getElementById('group-modal');
+        if (modal) {
+            console.log('✅ Modal DOM element trouvé');
+        } else {
+            console.log('❌ Modal DOM element non trouvé');
+        }
+    }
+    
+    // Fonction obsolète supprimée - utilisation de openGroupModal() améliorée
+    
+    // Intercepter la soumission du formulaire
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM chargé, configuration des listeners...');
+        
+        const form = document.querySelector('#group-modal form');
+        if (form) {
+            console.log('✅ Formulaire trouvé');
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                console.log('📤 Soumission du formulaire détectée');
+                
+                // Valider le formulaire
+                if (!validateForm(form)) {
+                    return;
+                }
+                
+                // Utiliser la nouvelle fonction AJAX
+                submitGroupForm(form, 'add_member');
+            });
+        } else {
+            console.log('❌ Formulaire non trouvé');
+        }
+        
+        // Tester le modal
+        testModal();
+    });
+    
+    // Remplacer temporairement le onclick du bouton
+    document.addEventListener('DOMContentLoaded', function() {
+        const addButton = document.querySelector('button[onclick="openGroupModal()"]');
+        if (addButton) {
+            console.log('✅ Bouton "Ajouter un membre" trouvé');
+            addButton.onclick = function() {
+                console.log('🔘 Bouton "Ajouter un membre" cliqué');
+                openGroupModal(); // Utiliser la fonction améliorée
+            };
+        } else {
+            console.log('❌ Bouton "Ajouter un membre" non trouvé');
+        }
+        
+        // Test du modal au chargement
+        console.log('Test du modal au chargement...');
+        const modal = document.getElementById('group-modal');
+        if (modal) {
+            console.log('Modal trouvé au chargement');
+            console.log('État initial du modal:');
+            console.log('- Display:', getComputedStyle(modal).display);
+            console.log('- Opacity:', getComputedStyle(modal).opacity);
+            console.log('- Z-index:', getComputedStyle(modal).zIndex);
+            console.log('- Position:', getComputedStyle(modal).position);
+        } else {
+            console.log('❌ Modal non trouvé au chargement');
+        }
+    });
+    
+    // Code de débogage retiré - utilisation de la soumission AJAX normale
     </script>
 </body>
 </html> 

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal</title>
+    <style>
+        /* Modal styles */
+        .modal {
+            display: none !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999 !important;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active {
+            display: block !important;
+            opacity: 1 !important;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .modal-close:hover {
+            background-color: #f0f0f0;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background-color: #00a884;
+            color: white;
+            border-color: #00a884;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test du Modal</h1>
+    <button onclick="openModal()" class="btn btn-primary">Ouvrir Modal</button>
+    <button onclick="testModal()" class="btn btn-secondary">Test Modal</button>
+
+    <div id="test-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Test Modal</h3>
+                <button type="button" class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div>
+                <p>Ceci est un test du modal. Si vous voyez ce message, le modal fonctionne !</p>
+                <form>
+                    <div>
+                        <label>Test input:</label>
+                        <select>
+                            <option>Option 1</option>
+                            <option>Option 2</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button type="button" onclick="closeModal()" class="btn btn-secondary">Fermer</button>
+                        <button type="button" class="btn btn-primary">Test</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            console.log('Ouverture du modal de test...');
+            const modal = document.getElementById('test-modal');
+            if (modal) {
+                console.log('Modal trouvé');
+                modal.style.display = 'block';
+                modal.style.opacity = '1';
+                modal.style.zIndex = '9999';
+                modal.classList.add('active');
+                console.log('Modal classes:', modal.className);
+                console.log('Modal style:', modal.style.cssText);
+            } else {
+                console.log('Modal non trouvé');
+            }
+        }
+
+        function closeModal() {
+            console.log('Fermeture du modal');
+            const modal = document.getElementById('test-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.style.opacity = '0';
+                modal.classList.remove('active');
+            }
+        }
+
+        function testModal() {
+            const modal = document.getElementById('test-modal');
+            if (modal) {
+                console.log('État du modal:');
+                console.log('- Display:', getComputedStyle(modal).display);
+                console.log('- Opacity:', getComputedStyle(modal).opacity);
+                console.log('- Z-index:', getComputedStyle(modal).zIndex);
+                console.log('- Position:', getComputedStyle(modal).position);
+                console.log('- Classes:', modal.className);
+            }
+        }
+
+        // Test automatique
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM chargé, modal disponible');
+            testModal();
+        });
+    </script>
+</body>
+</html> 
