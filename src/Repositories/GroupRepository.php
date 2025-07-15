@@ -139,9 +139,62 @@ class GroupRepository
      */
     public function update(Group $group): bool
     {
-        // Supprimer l'ancien et ajouter le nouveau
-        $this->xmlManager->deleteElementById('group', $group->getId());
-        return $this->create($group);
+        try {
+            // Récupérer l'élément existant
+            $element = $this->xmlManager->findElementById('group', $group->getId());
+            if (!$element) {
+                // Si l'élément n'existe pas, le créer
+                return $this->create($group);
+            }
+            
+            // Mettre à jour les propriétés de base
+            $nameElement = $element->getElementsByTagName('name')->item(0);
+            if ($nameElement) {
+                $nameElement->textContent = $group->getName();
+            }
+            
+            // Mettre à jour la description
+            $descriptionElement = $element->getElementsByTagName('description')->item(0);
+            if ($group->getDescription()) {
+                if ($descriptionElement) {
+                    $descriptionElement->textContent = $group->getDescription();
+                } else {
+                    // Créer l'élément description s'il n'existe pas
+                    $newDescElement = $element->ownerDocument->createElement('description', $group->getDescription());
+                    $element->appendChild($newDescElement);
+                }
+            } else if ($descriptionElement) {
+                // Supprimer la description si elle est vide
+                $element->removeChild($descriptionElement);
+            }
+            
+            // Mettre à jour les membres
+            $membersElement = $element->getElementsByTagName('members')->item(0);
+            if ($membersElement) {
+                // Supprimer l'ancien élément members
+                $element->removeChild($membersElement);
+            }
+            
+            // Recréer l'élément members avec les nouveaux membres
+            $members = $group->getMembers();
+            if (!empty($members)) {
+                $newMembersElement = $element->ownerDocument->createElement('members');
+                foreach ($members as $userId => $role) {
+                    $memberElement = $element->ownerDocument->createElement('member');
+                    $memberElement->setAttribute('user_id', $userId);
+                    $memberElement->setAttribute('role', $role);
+                    $newMembersElement->appendChild($memberElement);
+                }
+                $element->appendChild($newMembersElement);
+            }
+            
+            // Sauvegarder les modifications
+            return $this->xmlManager->save();
+            
+        } catch (Exception $e) {
+            error_log("Erreur lors de la mise à jour du groupe: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -321,11 +374,30 @@ class GroupRepository
     public function addMemberToGroup(string $groupId, string $userId, string $role = 'member'): bool
     {
         $group = $this->findById($groupId);
-        if ($group) {
-            $group->addMember($userId, $role);
-            return $this->update($group);
+        if (!$group) {
+            error_log("Groupe non trouvé: $groupId");
+            return false;
         }
-        return false;
+        
+        // Vérifier si l'utilisateur est déjà membre
+        if ($group->isMember($userId)) {
+            error_log("L'utilisateur $userId est déjà membre du groupe $groupId");
+            return false;
+        }
+        
+        // Ajouter le membre
+        $group->addMember($userId, $role);
+        
+        // Sauvegarder les modifications
+        $result = $this->update($group);
+        
+        if ($result) {
+            error_log("Membre $userId ajouté au groupe $groupId avec le rôle $role");
+        } else {
+            error_log("Échec de l'ajout du membre $userId au groupe $groupId");
+        }
+        
+        return $result;
     }
 
     /**

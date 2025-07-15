@@ -18,8 +18,15 @@ session_start();
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 
+logInfo("AJAX Request", [
+    'action' => $_GET['action'] ?? $_POST['action'] ?? 'unknown',
+    'method' => $_SERVER['REQUEST_METHOD'],
+    'user_id' => $_SESSION['user_id'] ?? 'anonymous'
+]);
+
 // Vérification de l'authentification
 if (!isset($_SESSION['user_id'])) {
+    logWarning("Non authentifié", ['IP' => $_SERVER['REMOTE_ADDR']]);
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'Non authentifié']);
     exit;
@@ -44,19 +51,40 @@ try {
         // ===========================================
         
         case 'send_message':
+            logInfo("Send message request", [
+                'user_id' => $_SESSION['user_id'],
+                'content_length' => strlen($_POST['content'] ?? ''),
+                'recipient_id' => $_POST['recipient_id'] ?? '',
+                'type' => $_POST['type'] ?? 'text'
+            ]);
+            
             $content = trim($_POST['content'] ?? '');
             $recipientId = $_POST['recipient_id'] ?? '';
             $type = $_POST['type'] ?? 'text';
             
             if (empty($content)) {
+                logWarning("Message vide", ['user_id' => $_SESSION['user_id']]);
                 throw new Exception('Le message ne peut pas être vide');
             }
             
             if (empty($recipientId)) {
+                logWarning("Destinataire non spécifié", ['user_id' => $_SESSION['user_id']]);
                 throw new Exception('Destinataire non spécifié');
             }
             
+            logDebug("Tentative d'envoi de message", [
+                'from' => $_SESSION['user_id'],
+                'to' => $recipientId,
+                'content' => substr($content, 0, 50) . '...'
+            ]);
+            
             $message = $messageService->sendPrivateMessage($_SESSION['user_id'], $recipientId, $content, $type);
+            
+            logSuccess("Message envoyé", [
+                'message_id' => $message->getId(),
+                'from' => $_SESSION['user_id'],
+                'to' => $recipientId
+            ]);
             
             echo json_encode([
                 'success' => true,
@@ -130,8 +158,8 @@ try {
                 $group = $groupRepo->getGroupById($id);
                 $members = $groupRepo->getGroupMembers($id);
                 $isMember = false;
-                foreach ($members as $member) {
-                    if ($member['user_id'] === $_SESSION['user_id']) {
+                foreach ($members as $userId => $role) {
+                    if ($userId === $_SESSION['user_id']) {
                         $isMember = true;
                         break;
                     }
@@ -360,10 +388,24 @@ try {
     }
     
 } catch (Exception $e) {
+    logError("AJAX Exception", [
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'trace' => $e->getTraceAsString(),
+        'action' => $_GET['action'] ?? $_POST['action'] ?? 'unknown',
+        'user_id' => $_SESSION['user_id'] ?? 'anonymous'
+    ]);
+    
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => $e->getMessage(),
+        'debug_info' => [
+            'file' => basename($e->getFile()),
+            'line' => $e->getLine(),
+            'timestamp' => date('Y-m-d H:i:s')
+        ]
     ]);
 }
 ?> 

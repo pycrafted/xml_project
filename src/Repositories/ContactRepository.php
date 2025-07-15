@@ -35,7 +35,8 @@ class ContactRepository
         $contactData = [
             'attributes' => ['id' => $contact->getId()],
             'name' => $contact->getName(),
-            'user_id' => $contact->getUserId()
+            'user_id' => $contact->getUserId(),
+            'contact_user_id' => $contact->getContactUserId()
         ];
 
         return $this->xmlManager->addElement('//wa:contacts', 'contact', $contactData);
@@ -80,10 +81,14 @@ class ContactRepository
                     $id = (string) $attributes['id'];
                     
                     if (!empty($id)) {
+                        $contactUserIdNode = $contactXml->children($defaultNS)->contact_user_id;
+                        $contactUserId = $contactUserIdNode ? (string) $contactUserIdNode : null;
+                        
                         $contact = new Contact(
                             $id,
                             (string) $contactXml->children($defaultNS)->name,
-                            (string) $contactXml->children($defaultNS)->user_id
+                            (string) $contactXml->children($defaultNS)->user_id,
+                            $contactUserId
                         );
                         
                         $contacts[] = $contact;
@@ -163,10 +168,14 @@ class ContactRepository
      */
     private function elementToContact(\DOMElement $element): Contact
     {
+        $contactUserIdNode = $element->getElementsByTagName('contact_user_id')->item(0);
+        $contactUserId = $contactUserIdNode ? $contactUserIdNode->textContent : null;
+        
         return new Contact(
             $element->getAttribute('id'),
             $element->getElementsByTagName('name')->item(0)->textContent,
-            $element->getElementsByTagName('user_id')->item(0)->textContent
+            $element->getElementsByTagName('user_id')->item(0)->textContent,
+            $contactUserId
         );
     }
 

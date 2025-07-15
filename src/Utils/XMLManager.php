@@ -82,6 +82,7 @@ class XMLManager
 
     /**
      * Crée un fichier XML vide avec la structure de base
+     * Ne crée pas de sections vides car le XSD exige au moins un élément dans chaque section
      */
     private function createEmptyDataFile(): void
     {
@@ -89,10 +90,6 @@ class XMLManager
         $xml .= "<whatsapp_data xmlns=\"" . self::NAMESPACE_URI . "\"\n";
         $xml .= "               xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n";
         $xml .= "               xsi:schemaLocation=\"" . self::NAMESPACE_URI . " " . $this->xsdFile . "\">\n";
-        $xml .= "    <users></users>\n";
-        $xml .= "    <contacts></contacts>\n";
-        $xml .= "    <groups></groups>\n";
-        $xml .= "    <messages></messages>\n";
         $xml .= "</whatsapp_data>\n";
 
         // Créer le répertoire data s'il n'existe pas
@@ -210,7 +207,8 @@ class XMLManager
         
         $parentNode = $xpath->query($parentPath)->item(0);
         if (!$parentNode) {
-            throw new Exception("Parent node non trouvé : {$parentPath}");
+            // Créer automatiquement la section parente si elle n'existe pas
+            $parentNode = $this->createParentSection($parentPath);
         }
 
         $newElement = $this->dom->createElementNS(self::NAMESPACE_URI, $elementName);
@@ -326,5 +324,36 @@ class XMLManager
             return $this->save();
         }
         return false;
+    }
+
+    /**
+     * Crée automatiquement une section parente si elle n'existe pas
+     * 
+     * @param string $parentPath XPath du parent
+     * @return \DOMElement
+     */
+    private function createParentSection(string $parentPath): \DOMElement
+    {
+        $xpath = new \DOMXPath($this->dom);
+        $xpath->registerNamespace('wa', self::NAMESPACE_URI);
+        
+        // Extraire le nom de la section du path (ex: //wa:users -> users)
+        if (preg_match('/\/\/wa:(\w+)$/', $parentPath, $matches)) {
+            $sectionName = $matches[1];
+            
+            // Vérifier si c'est une section valide
+            $validSections = ['users', 'contacts', 'groups', 'messages'];
+            if (in_array($sectionName, $validSections)) {
+                // Créer la section dans le noeud racine
+                $rootNode = $xpath->query('//wa:whatsapp_data')->item(0);
+                if ($rootNode) {
+                    $sectionElement = $this->dom->createElementNS(self::NAMESPACE_URI, $sectionName);
+                    $rootNode->appendChild($sectionElement);
+                    return $sectionElement;
+                }
+            }
+        }
+        
+        throw new Exception("Impossible de créer la section parente : {$parentPath}");
     }
 } 

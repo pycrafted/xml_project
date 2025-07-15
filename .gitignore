@@ -1,0 +1,72 @@
+# Vendor directory
+/vendor/
+
+# Logs
+*.log
+/logs/
+/public/logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test coverage
+/coverage/
+*.coverage
+.phpunit.result.cache
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+/tmp/
+/temp/
+
+# Debug files
+debug_*.php
+test_*.php
+fix_*.php
+final_*.php
+*_test.php
+*_debug.php
+
+# Temporary test files
+test_group_*.php
+test_chat_*.php
+
+# Build files
+/build/
+/dist/
+
+# Documentation builds
+/docs/_build/
+
+# Database files
+*.sqlite
+*.db
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# PHP specific
+composer.phar
+
+# Project specific
+/data/*.xml.backup
+/public/data/*.xml.backup
+server.log 

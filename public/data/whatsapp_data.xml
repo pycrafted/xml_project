@@ -1,9 +1,84 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<whatsapp_data xmlns="http://whatsapp.clone/data"
-               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-               xsi:schemaLocation="http://whatsapp.clone/data schemas/whatsapp_data.xsd">
-    <users></users>
-    <contacts></contacts>
-    <groups></groups>
-    <messages></messages>
+<whatsapp_data xmlns="http://whatsapp.clone/data" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://whatsapp.clone/data schemas/whatsapp_data.xsd">
+    <users>
+        
+        <user id="bob2025">
+            <name>Bob Durand</name>
+            <email>bob@test.com</email>
+            <status>active</status>
+            <settings>
+                <theme>dark</theme>
+                <notifications>false</notifications>
+                <language>en</language>
+            </settings>
+        </user>
+        <user id="charlie2025">
+            <name>Charlie Dupont</name>
+            <email>charlie@test.com</email>
+            <status>active</status>
+            <settings>
+                <theme>light</theme>
+                <notifications>true</notifications>
+                <language>fr</language>
+            </settings>
+        </user>
+        <user id="diana2025">
+            <name>Diana Lemoine</name>
+            <email>diana@test.com</email>
+            <status>active</status>
+            <settings>
+                <theme>dark</theme>
+                <notifications>true</notifications>
+                <language>fr</language>
+            </settings>
+        </user>
+        <user id="erik2025">
+            <name>Erik Rousseau</name>
+            <email>erik@test.com</email>
+            <status>active</status>
+            <settings>
+                <theme>light</theme>
+                <notifications>false</notifications>
+                <language>en</language>
+            </settings>
+        </user>
+    <user id="user_1752532999_3258"><name>Alice Martin</name><email>alice@test.com</email><status>active</status><settings/></user><user id="admin"><name>Administrateur</name><email>admin@whatsapp.com</email><status>active</status><settings/></user><user id="demo"><name>Utilisateur Demo</name><email>demo@whatsapp.com</email><status>active</status><settings/></user><user id="test"><name>Test User</name><email>test@whatsapp.com</email><status>active</status><settings/></user><user id="testuser1"><name>Test User 1</name><email>testuser1@example.com</email><status>active</status><settings/></user><user id="testuser2"><name>Test User 2</name><email>testuser2@example.com</email><status>active</status><settings/></user><user id="testuser3"><name>Test User 3</name><email>testuser3@example.com</email><status>active</status><settings/></user></users>
+    
+    <contacts>
+        
+        <contact id="contact2">
+            <name>Charlie Dupont</name>
+            <user_id>alice2025</user_id>
+        </contact>
+        <contact id="contact3">
+            <name>Diana Lemoine</name>
+            <user_id>alice2025</user_id>
+        </contact>
+    <contact id="contact_1752530432_68757e00e023c"><name>Bob Durand</name><user_id>user_1752530432_5693</user_id></contact><contact id="contact_1752530432_68757e00eb84d"><name>Charlie Dupont</name><user_id>user_1752530432_5693</user_id></contact><contact id="contact_1752530432_68757e00f34c0"><name>Diana Lemoine</name><user_id>user_1752530432_5693</user_id></contact><contact id="contact_1752531126_687580b66c6cf"><name>Bob Durand</name><user_id>alice2025</user_id></contact><contact id="bob2025"><name>Bob Durand</name><user_id>alice2025</user_id></contact><contact id="bob2025"><name>Bob Durand</name><user_id>alice2025</user_id></contact><contact id="contact_1752531571_68758273efae3"><name>Bob Durand</name><user_id>user_1752531571_6002</user_id></contact><contact id="contact_1752531572_6875827406cff"><name>Charlie Dupont</name><user_id>user_1752531571_6002</user_id></contact><contact id="contact_1752531572_687582740e78a"><name>Diana Lemoine</name><user_id>user_1752531571_6002</user_id></contact><contact id="contact_1752531574_68758276cfd74"><name>Bob Durand</name><user_id>user_1752531574_5465</user_id></contact><contact id="contact_1752531574_68758276d6d8f"><name>Charlie Dupont</name><user_id>user_1752531574_5465</user_id></contact><contact id="contact_1752531574_68758276e2aed"><name>Diana Lemoine</name><user_id>user_1752531574_5465</user_id></contact><contact id="contact_1752531662_687582ce0dfec"><name>laye</name><user_id>user_1752524208_8267</user_id></contact><contact id="contact_1752531689_687582e934772"><name>Diana Lemoine</name><user_id>user_1752524208_8267</user_id></contact><contact id="contact_1752531982_6875840e31d66"><name>Bob Durand</name><user_id>user_1752531982_9311</user_id></contact><contact id="contact_1752531982_6875840e38b4a"><name>Charlie Dupont</name><user_id>user_1752531982_9311</user_id></contact><contact id="contact_1752531982_6875840e4162f"><name>Diana Lemoine</name><user_id>user_1752531982_9311</user_id></contact><contact id="contact_1752531984_68758410b7339"><name>Bob Durand</name><user_id>user_1752531984_4828</user_id></contact><contact id="contact_1752531984_68758410c0c48"><name>Charlie Dupont</name><user_id>user_1752531984_4828</user_id></contact><contact id="contact_1752531984_68758410c9f31"><name>Diana Lemoine</name><user_id>user_1752531984_4828</user_id></contact><contact id="contact_1752532013_6875842de9d7b"><name>Bob Durand</name><user_id>user_1752532013_3016</user_id></contact><contact id="contact_1752532014_6875842e024a9"><name>Charlie Dupont</name><user_id>user_1752532013_3016</user_id></contact><contact id="contact_1752532014_6875842e0d05a"><name>Diana Lemoine</name><user_id>user_1752532013_3016</user_id></contact><contact id="contact_1752532016_68758430c1f4d"><name>Bob Durand</name><user_id>user_1752532016_9313</user_id></contact><contact id="contact_1752532016_68758430c989d"><name>Charlie Dupont</name><user_id>user_1752532016_9313</user_id></contact><contact id="contact_1752532016_68758430d5319"><name>Diana Lemoine</name><user_id>user_1752532016_9313</user_id></contact><contact id="contact_1752532193_687584e1bcc1a"><name>modou lo</name><user_id>user_1752524208_8267</user_id></contact><contact id="contact_1752532621_6875868d66b7b"><name>Bob Durand</name><user_id>user_1752532621_6738</user_id></contact><contact id="contact_1752532621_6875868d72329"><name>Charlie Dupont</name><user_id>user_1752532621_6738</user_id></contact><contact id="contact_1752532621_6875868d7d21e"><name>Diana Lemoine</name><user_id>user_1752532621_6738</user_id></contact><contact id="contact_1752532624_68758690599ad"><name>Bob Durand</name><user_id>user_1752532624_2775</user_id></contact><contact id="contact_1752532624_6875869060fc9"><name>Charlie Dupont</name><user_id>user_1752532624_2775</user_id></contact><contact id="contact_1752532624_687586906d27e"><name>Diana Lemoine</name><user_id>user_1752532624_2775</user_id></contact><contact id="contact_1752532913_687587b17a36c"><name>Bob Durand</name><user_id>alice2025</user_id></contact><contact id="contact_1752532996_68758804c7145"><name>Bob Durand</name><user_id>user_1752532996_3615</user_id></contact><contact id="contact_1752532996_68758804cf3e3"><name>Charlie Dupont</name><user_id>user_1752532996_3615</user_id></contact><contact id="contact_1752532996_68758804db311"><name>Diana Lemoine</name><user_id>user_1752532996_3615</user_id></contact><contact id="contact_1752533053_6875883d63011"><name>Bob Durand</name><user_id>alice2025</user_id></contact><contact id="contact_1752571394_68761e02a31ea"><name>Alice Dupont</name><user_id>admin</user_id></contact><contact id="contact_1752571407_68761e0f352fa"><name>modou lo</name><user_id>admin</user_id></contact><contact id="contact_1752573751_68762737bc512"><name>Alice Martin</name><user_id>demo</user_id></contact></contacts>
+    
+    <groups>
+        
+        <group id="group2">
+            <name>Groupe Travail</name>
+            <description>Groupe de travail</description>
+            <members>
+                <member user_id="alice2025" role="admin"/>
+                <member user_id="charlie2025" role="member"/>
+            </members>
+        </group>
+        <group id="group3">
+            <name>Groupe Famille</name>
+            <description>Groupe familial</description>
+            <members>
+                <member user_id="alice2025" role="admin"/>
+                <member user_id="diana2025" role="member"/>
+            </members>
+        </group>
+    <group id="group1"><name>Groupe Amis</name><description>Groupe d'amis proches</description><members><member user_id="alice2025" role="admin"/><member user_id="bob2025" role="member"/></members></group><group id="test_empty_group_1752536638"><name>Groupe Test Vide</name></group><group id="test_group_with_member_1752536638"><name>Groupe Test avec Membre</name><members><member user_id="testuser1" role="admin"/></members></group><group id="test_group_multi_members_1752536638"><name>Groupe Test Multi Membres</name><members><member user_id="testuser1" role="admin"/><member user_id="testuser2" role="member"/><member user_id="testuser3" role="member"/></members></group><group id="group_1752536638_6875963ece449"><name>Test Sans Créateur</name><description>Description test</description></group><group id="group_1752536638_6875963ed6d3e"><name>Test Avec Créateur</name><description>Description test</description><members><member user_id="testuser1" role="admin"/></members></group><group id="group_1752536638_6875963edbe43"><name>Test Description Vide</name><members><member user_id="testuser2" role="admin"/></members></group><group id="test_empty_1752536688"><name>Test Groupe Vide</name></group><group id="test_empty_1752536834"><name>Test Groupe Vide</name></group><group id="group_1752569790_687617be41315"><name>test</name><members><member user_id="admin" role="admin"/></members></group></groups>
+    
+    <messages>
+        
+        
+        
+    <message id="msg_450f0ccb_8912"><content>d</content><type>text</type><timestamp>2025-07-15 10:41:52</timestamp><status>sent</status><from_user>admin</from_user><to_user>admin</to_user></message><message id="msg_7a943630_9769"><content>der</content><type>text</type><timestamp>2025-07-15 10:56:09</timestamp><status>sent</status><from_user>admin</from_user><to_user>admin</to_user></message><message id="msg_7b0bfbc8_9776"><content>fff</content><type>text</type><timestamp>2025-07-15 10:56:16</timestamp><status>sent</status><from_user>admin</from_user><to_user>admin</to_user></message><message id="msg_9287d4c1_0152"><content>saalut</content><type>text</type><timestamp>2025-07-15 11:02:32</timestamp><status>sent</status><from_user>admin</from_user><to_user>admin</to_user></message><message id="msg_a9e47540_0526"><content>go</content><type>text</type><timestamp>2025-07-15 11:08:46</timestamp><status>sent</status><from_user>admin</from_user><to_user>admin</to_user></message><message id="msg_e1a0e5d4_1418"><content>j</content><type>text</type><timestamp>2025-07-15 11:23:38</timestamp><status>sent</status><from_user>admin</from_user><to_user>admin</to_user></message><message id="msg_f90a374f_1792"><content>titititititi</content><type>text</type><timestamp>2025-07-15 11:29:52</timestamp><status>sent</status><from_user>admin</from_user><to_user>admin</to_user></message><message id="msg_5870c728_3319"><content>d</content><type>text</type><timestamp>2025-07-15 11:55:19</timestamp><status>sent</status><from_user>admin</from_user><to_user>admin</to_user></message><message id="msg_741b9163_3761"><content>salut</content><type>text</type><timestamp>2025-07-15 12:02:41</timestamp><status>sent</status><from_user>demo</from_user><to_user>demo</to_user></message><message id="msg_d94033d8_5380"><content>ca va</content><type>text</type><timestamp>2025-07-15 12:29:40</timestamp><status>sent</status><from_user>demo</from_user><to_user>demo</to_user></message></messages>
 </whatsapp_data>

@@ -79,14 +79,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // NOTIFICATIONS
     // ===========================================
     
-    // Auto-hide alerts après 5 secondes
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(alert => {
-        setTimeout(() => {
-            alert.style.opacity = '0';
-            setTimeout(() => alert.remove(), 300);
-        }, 5000);
-    });
+    // Les alertes sont gérées par la fonction showAlert()
+    // Pas besoin de code automatique ici
 });
 
 // ===========================================
@@ -115,22 +109,130 @@ function validateForm(form) {
 /**
  * Affiche une alerte
  */
-function showAlert(message, type = 'info') {
+function showAlert(message, type = 'info', persistent = false) {
+    console.log(`[ALERT] ${type.toUpperCase()}: ${message}`);
+    
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
     alertDiv.innerHTML = `
-        <strong>${type === 'error' ? 'Erreur' : 'Information'}</strong>
+        <strong>${type === 'error' ? 'Erreur' : type === 'success' ? 'Succès' : 'Information'}</strong>
         ${message}
+        ${persistent ? '<button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; font-size: 16px; cursor: pointer;">×</button>' : ''}
     `;
     
     const container = document.querySelector('.content-body') || document.body;
     container.insertBefore(alertDiv, container.firstChild);
     
-    // Auto-hide après 5 secondes
+    // Auto-hide après 15 secondes, sauf si persistent
+    if (!persistent) {
     setTimeout(() => {
+            alertDiv.style.transition = 'opacity 0.5s ease-out';
         alertDiv.style.opacity = '0';
-        setTimeout(() => alertDiv.remove(), 300);
-    }, 5000);
+            setTimeout(() => alertDiv.remove(), 500);
+        }, 15000); // Augmenté à 15 secondes pour une meilleure lisibilité
+    }
+}
+
+/**
+ * Affiche une alerte de débogage (persiste jusqu'à fermeture manuelle)
+ */
+function showDebugAlert(message, type = 'info') {
+    showAlert(`[DEBUG] ${message}`, type, true);
+}
+
+/**
+ * Système de logging avancé
+ */
+const Logger = {
+    logs: [],
+    
+    log: function(level, message, data = null) {
+        const timestamp = new Date().toISOString();
+        const logEntry = { timestamp, level, message, data };
+        
+        this.logs.push(logEntry);
+        console.log(`[${timestamp}] [${level}] ${message}`, data || '');
+        
+        // Garder seulement les 100 derniers logs
+        if (this.logs.length > 100) {
+            this.logs.shift();
+        }
+    },
+    
+    info: function(message, data = null) {
+        this.log('INFO', message, data);
+    },
+    
+    error: function(message, data = null) {
+        this.log('ERROR', message, data);
+        showDebugAlert(`ERROR: ${message}`, 'error');
+    },
+    
+    success: function(message, data = null) {
+        this.log('SUCCESS', message, data);
+    },
+    
+    debug: function(message, data = null) {
+        this.log('DEBUG', message, data);
+    },
+    
+    getLogs: function() {
+        return this.logs;
+    },
+    
+    clearLogs: function() {
+        this.logs = [];
+    },
+    
+    exportLogs: function() {
+        const logsText = this.logs.map(log => 
+            `[${log.timestamp}] [${log.level}] ${log.message}${log.data ? ' | Data: ' + JSON.stringify(log.data) : ''}`
+        ).join('\n');
+        
+        const blob = new Blob([logsText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `whatsapp_logs_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+};
+
+// Ajouter un panneau de debug (accessible via F12 ou Ctrl+Shift+D)
+document.addEventListener('keydown', function(e) {
+    if ((e.key === 'F12') || (e.ctrlKey && e.shiftKey && e.key === 'D')) {
+        e.preventDefault();
+        showDebugPanel();
+    }
+});
+
+function showDebugPanel() {
+    const debugPanel = document.createElement('div');
+    debugPanel.id = 'debug-panel';
+    debugPanel.innerHTML = `
+        <div style="position: fixed; top: 10px; right: 10px; width: 400px; max-height: 500px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: #007bff; color: white; padding: 10px; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                <span>🔧 Debug Panel</span>
+                <button onclick="document.getElementById('debug-panel').remove()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer;">×</button>
+            </div>
+            <div style="padding: 15px; max-height: 400px; overflow-y: auto;">
+                <button onclick="Logger.clearLogs(); showDebugAlert('Logs cleared', 'info')" style="margin-bottom: 10px; padding: 5px 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Clear Logs</button>
+                <button onclick="Logger.exportLogs()" style="margin-bottom: 10px; margin-left: 5px; padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Export Logs</button>
+                <div id="debug-logs" style="background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
+                    ${Logger.getLogs().map(log => `<div style="margin-bottom: 5px; ${log.level === 'ERROR' ? 'color: red;' : log.level === 'SUCCESS' ? 'color: green;' : ''}"><strong>[${log.level}]</strong> ${log.message}</div>`).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Supprimer le panneau existant s'il y en a un
+    const existingPanel = document.getElementById('debug-panel');
+    if (existingPanel) {
+        existingPanel.remove();
+    }
+    
+    document.body.appendChild(debugPanel);
 }
 
 /**
@@ -144,11 +246,22 @@ function scrollToBottom(element) {
  * Envoi de message AJAX
  */
 function sendMessage() {
+    Logger.info('Début de l\'envoi de message');
+    
     const messageInput = document.getElementById('message-input');
     const chatMessages = document.querySelector('.chat-messages');
     const recipientId = document.getElementById('recipient-id');
+    const conversationId = document.getElementById('conversation-id');
+    
+    Logger.debug('Éléments DOM récupérés', {
+        messageInput: messageInput ? 'OK' : 'MANQUANT',
+        chatMessages: chatMessages ? 'OK' : 'MANQUANT',
+        recipientId: recipientId ? recipientId.value : 'MANQUANT',
+        conversationId: conversationId ? conversationId.value : 'MANQUANT'
+    });
     
     if (!messageInput.value.trim()) {
+        Logger.error('Message vide');
         showAlert('Veuillez saisir un message', 'error');
         return;
     }
@@ -156,25 +269,54 @@ function sendMessage() {
     const formData = new FormData();
     formData.append('action', 'send_message');
     formData.append('content', messageInput.value);
-    formData.append('recipient_id', recipientId ? recipientId.value : '');
+    
+    Logger.debug('Contenu du message', { content: messageInput.value });
+    
+    // Pour les conversations privées, utiliser recipient_id
+    if (recipientId && recipientId.value) {
+        formData.append('recipient_id', recipientId.value);
+        Logger.info('Message privé', { recipient_id: recipientId.value });
+    }
+    // Pour les groupes, utiliser group_id
+    else if (conversationId && conversationId.value.startsWith('group_')) {
+        const groupId = conversationId.value.substring(6); // Enlever "group_"
+        formData.append('group_id', groupId);
+        formData.append('action', 'send_group_message');
+        Logger.info('Message de groupe', { group_id: groupId });
+    }
+    else {
+        Logger.error('Destinataire non spécifié');
+        showAlert('Destinataire non spécifié', 'error');
+        return;
+    }
+    
+    Logger.info('Envoi de la requête AJAX');
     
     fetch('ajax.php', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        Logger.debug('Réponse reçue', { status: response.status, statusText: response.statusText });
+        return response.json();
+    })
     .then(data => {
+        Logger.debug('Données JSON reçues', data);
+        
         if (data.success) {
             // Ajouter le message à l'interface
             addMessageToChat(data.message, 'sent');
             messageInput.value = '';
             scrollToBottom(chatMessages);
+            Logger.success('Message envoyé avec succès');
             showAlert('Message envoyé', 'success');
         } else {
+            Logger.error('Erreur lors de l\'envoi', data);
             showAlert(data.error || 'Erreur lors de l\'envoi', 'error');
         }
     })
     .catch(error => {
+        Logger.error('Erreur de connexion', error);
         console.error('Erreur:', error);
         showAlert('Erreur de connexion', 'error');
     });
@@ -230,13 +372,13 @@ function loadMessages(conversationId) {
                 
                 const chatMessages = document.querySelector('.chat-messages');
                 if (chatMessages) {
-                    chatMessages.innerHTML = '';
-                    
-                    data.messages.forEach(message => {
-                        addMessageToChat(message, message.is_sent ? 'sent' : 'received');
-                    });
-                    
-                    scrollToBottom(chatMessages);
+                chatMessages.innerHTML = '';
+                
+                data.messages.forEach(message => {
+                    addMessageToChat(message, message.is_sent ? 'sent' : 'received');
+                });
+                
+                scrollToBottom(chatMessages);
                 }
             } else {
                 console.error('Erreur récupération messages:', data.error);
@@ -290,7 +432,7 @@ function resetCurrentConversation() {
 
 // Rafraîchir les messages toutes les 3 secondes seulement sur la page de chat
 if (window.location.pathname.includes('chat.php')) {
-    setInterval(autoRefreshMessages, 3000);
+setInterval(autoRefreshMessages, 3000);
 }
 
 /**

@@ -203,7 +203,7 @@ try {
                                         <div>
                                             <strong>
                                                 <?php if ($message->getFromUserId() === $_SESSION['user_id']): ?>
-                                                    Vous → <?= htmlspecialchars($message->getToUserId() ?: $message->getToGroupId()) ?>
+                                    Vous → <?= htmlspecialchars($message->getToUser() ?: $message->getToGroup()) ?>
                                                 <?php else: ?>
                                                     <?= htmlspecialchars($message->getFromUserId()) ?> → Vous
                                                 <?php endif; ?>

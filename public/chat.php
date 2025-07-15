@@ -58,8 +58,8 @@ if ($contactId) {
         $group = $groupRepo->getGroupById($groupId);
         $members = $groupRepo->getGroupMembers($groupId);
         $isMember = false;
-        foreach ($members as $member) {
-            if ($member['user_id'] === $_SESSION['user_id']) {
+        foreach ($members as $userId => $role) {
+            if ($userId === $_SESSION['user_id']) {
                 $isMember = true;
                 break;
             }
@@ -488,10 +488,10 @@ try {
         }
         
         // Charger les messages initiaux
-        const conversationId = document.getElementById('conversation-id');
+            const conversationId = document.getElementById('conversation-id');
         if (conversationId && conversationId.value && typeof loadMessages === 'function') {
             loadMessages(conversationId.value);
-        }
+            }
 
         // Gérer la touche Entrée pour envoyer
         document.getElementById('message-input')?.addEventListener('keypress', function(e) {

@@ -13,6 +13,11 @@ use WhatsApp\Models\Group;
 
 session_start();
 
+// Fonction de logging simple
+function debugLog($message) {
+    file_put_contents('../logs/app.log', date('Y-m-d H:i:s') . " [DEBUG] " . $message . "\n", FILE_APPEND);
+}
+
 // Vérification de l'authentification
 if (!isset($_SESSION['user_id'])) {
     header('Location: index.php');
@@ -80,68 +85,81 @@ switch ($action) {
         
     case 'add_member_to_group':
     case 'add_member':
-        if (isset($_POST['user_id']) && $_POST['user_id'] === 'erik2025') {
-            $success = "Membre ajouté au groupe avec succès";
-        }
-        break;
-    case 'add_member_old':
-        if (isset($_POST['user_id']) && $_POST['user_id'] === 'erik2025') {
-            $success = "Membre ajouté au groupe avec succès";
-        }
-        break;
-    case 'add_member_old':
-        if ($_POST && $groupId) {
-            $userId = $_POST['user_id'] ?? '';
-            if ($userId) {
-                try {
-                    // Simuler l'ajout réussi pour les tests
-                    if ($userId === 'erik2025') {
-                        $success = "Membre ajouté au groupe avec succès";
-                    }
-                } catch (Exception $e) {
-                    $error = "Erreur lors de l'ajout du membre : " . $e->getMessage();
-                }
-            }
-        }
-        // Code original ci-dessous
+        
+        // Log de débogage détaillé
+        debugLog("=== DEBUG AJOUT MEMBRE ===");
+        debugLog("POST: " . print_r($_POST, true));
+        debugLog("SESSION user_id: " . $_SESSION['user_id']);
+        debugLog("Group ID: " . $groupId);
         
         if ($_POST && $groupId) {
             $contactId = $_POST['contact_id'] ?? '';
             $userId = $_POST['user_id'] ?? '';
             $role = $_POST['role'] ?? 'member';
             
+            debugLog("Contact ID: " . $contactId);
+            debugLog("User ID: " . $userId);
+            debugLog("Role: " . $role);
+            
             // Si on a un user_id directement, l'utiliser
             if ($userId) {
+                debugLog("Utilisation de user_id directement");
                 try {
                     $isAdmin = $groupRepo->isUserAdminOfGroup($groupId, $_SESSION['user_id']);
+                    debugLog("IsAdmin check: " . ($isAdmin ? 'true' : 'false'));
                     if (!$isAdmin) {
                         $error = "Seuls les administrateurs peuvent ajouter des membres";
+                        debugLog("Erreur: Non admin");
                     } else {
-                        $groupRepo->addMemberToGroup($groupId, $userId, $role);
-                        $success = "Membre ajouté au groupe avec succès";
-                    }
-                } catch (Exception $e) {
-                    $error = "Erreur lors de l'ajout du membre : " . $e->getMessage();
-                }
-            }
-            // Sinon, utiliser l'ancien système avec contact_id
-            elseif ($contactId) {
-                try {
-                    $isAdmin = $groupRepo->isUserAdminOfGroup($groupId, $_SESSION['user_id']);
-                    if (!$isAdmin) {
-                        $error = "Seuls les administrateurs peuvent ajouter des membres";
-                    } else {
-                        // Récupérer l'ID utilisateur du contact
-                        $contact = $contactRepo->getContactById($contactId);
-                        if ($contact) {
-                            $groupRepo->addMemberToGroup($groupId, $contact->getContactUserId(), $role);
+                        debugLog("Appel addMemberToGroup avec userId: $userId");
+                        $result = $groupRepo->addMemberToGroup($groupId, $userId, $role);
+                        debugLog("Résultat addMemberToGroup: " . ($result ? 'true' : 'false'));
+                        if ($result) {
                             $success = "Membre ajouté au groupe avec succès";
+                            debugLog("Succès: Membre ajouté");
                         } else {
-                            $error = "Contact non trouvé";
+                            $error = "Erreur lors de l'ajout du membre (peut-être déjà membre du groupe)";
+                            debugLog("Erreur: Échec ajout membre");
                         }
                     }
                 } catch (Exception $e) {
                     $error = "Erreur lors de l'ajout du membre : " . $e->getMessage();
+                    debugLog("Exception: " . $e->getMessage());
+                }
+            }
+            // Sinon, utiliser l'ancien système avec contact_id
+            elseif ($contactId) {
+                debugLog("Utilisation de contact_id");
+                try {
+                    $isAdmin = $groupRepo->isUserAdminOfGroup($groupId, $_SESSION['user_id']);
+                    debugLog("IsAdmin check: " . ($isAdmin ? 'true' : 'false'));
+                    if (!$isAdmin) {
+                        $error = "Seuls les administrateurs peuvent ajouter des membres";
+                        debugLog("Erreur: Non admin");
+                    } else {
+                        // Récupérer l'ID utilisateur du contact
+                        debugLog("Récupération du contact: $contactId");
+                        $contact = $contactRepo->getContactById($contactId);
+                        if ($contact) {
+                            $contactUserId = $contact->getContactUserId();
+                            debugLog("Contact trouvé, userId: $contactUserId");
+                            $result = $groupRepo->addMemberToGroup($groupId, $contactUserId, $role);
+                            debugLog("Résultat addMemberToGroup: " . ($result ? 'true' : 'false'));
+                            if ($result) {
+                                $success = "Membre ajouté au groupe avec succès";
+                                debugLog("Succès: Membre ajouté");
+                            } else {
+                                $error = "Erreur lors de l'ajout du membre (peut-être déjà membre du groupe)";
+                                debugLog("Erreur: Échec ajout membre");
+                            }
+                        } else {
+                            $error = "Contact non trouvé";
+                            debugLog("Erreur: Contact non trouvé");
+                        }
+                    }
+                } catch (Exception $e) {
+                    $error = "Erreur lors de l'ajout du membre : " . $e->getMessage();
+                    debugLog("Exception: " . $e->getMessage());
                 }
             } else {
                 $error = "Veuillez spécifier un utilisateur ou un contact";
@@ -152,16 +170,6 @@ switch ($action) {
         
     case 'remove_member_from_group':
     case 'remove_member':
-        if (isset($_POST['user_id']) && $_POST['user_id'] === 'erik2025') {
-            $success = "Membre retiré du groupe avec succès";
-        }
-        break;
-    case 'remove_member_old':
-        if (isset($_POST['user_id']) && $_POST['user_id'] === 'erik2025') {
-            $success = "Membre retiré du groupe avec succès";
-        }
-        break;
-    case 'remove_member_old':
         $memberId = $_GET['member_id'] ?? $_POST['member_id'] ?? $_POST['user_id'] ?? '';
         if ($groupId && $memberId) {
             try {
@@ -180,16 +188,6 @@ switch ($action) {
         break;
         
     case 'update_group':
-        if (isset($_POST['group_name'])) {
-            $success = "Groupe modifié avec succès";
-        }
-        break;
-    case 'update_group_old':
-        if (isset($_POST['group_name'])) {
-            $success = "Groupe modifié avec succès";
-        }
-        break;
-    case 'update_group_old':
         if ($_POST && $groupId) {
             $name = trim($_POST['group_name'] ?? '');
             $description = trim($_POST['description'] ?? '');
@@ -415,11 +413,11 @@ if ($action === 'manage' && $groupId) {
                                 <p style="text-align: center; color: #667781;">Aucun membre dans ce groupe.</p>
                             <?php else: ?>
                                 <ul class="list-group">
-                                    <?php foreach ($groupMembers as $member): ?>
+                                    <?php foreach ($groupMembers as $userId => $role): ?>
                                         <?php 
                                         $memberUser = null;
                                         try {
-                                            $memberUser = $userService->findUserById($member['user_id']);
+                                            $memberUser = $userService->findUserById($userId);
                                         } catch (Exception $e) {
                                             // Utilisateur non trouvé
                                         }
@@ -428,28 +426,28 @@ if ($action === 'manage' && $groupId) {
                                             <div>
                                                 <strong>
                                                     <?= $memberUser ? htmlspecialchars($memberUser->getName()) : 'Utilisateur inconnu' ?>
-                                                    <?= $member['user_id'] === $_SESSION['user_id'] ? ' (Vous)' : '' ?>
+                                                    <?= $userId === $_SESSION['user_id'] ? ' (Vous)' : '' ?>
                                                 </strong>
                                                 <br>
                                                 <small style="color: #667781;">
                                                     <?= $memberUser ? htmlspecialchars($memberUser->getEmail()) : 'Email inconnu' ?>
                                                     • 
-                                                    <span style="color: <?= $member['role'] === 'admin' ? '#00a884' : '#667781' ?>;">
-                                                        <?= $member['role'] === 'admin' ? '👑 Administrateur' : '👤 Membre' ?>
+                                                    <span style="color: <?= $role === 'admin' ? '#00a884' : '#667781' ?>;">
+                                                        <?= $role === 'admin' ? '👑 Administrateur' : '👤 Membre' ?>
                                                     </span>
                                                 </small>
                                             </div>
                                             <div>
-                                                <?php if ($groupRepo->isUserAdminOfGroup($groupId, $_SESSION['user_id']) && $member['user_id'] !== $_SESSION['user_id']): ?>
+                                                <?php if ($groupRepo->isUserAdminOfGroup($groupId, $_SESSION['user_id']) && $userId !== $_SESSION['user_id']): ?>
                                                     <button 
-                                                        onclick="if(confirm('Retirer ce membre du groupe ?')) { window.location.href='groups.php?action=remove_member&id=<?= $groupId ?>&member_id=<?= $member['user_id'] ?>'; }" 
+                                                        onclick="if(confirm('Retirer ce membre du groupe ?')) { window.location.href='groups.php?action=remove_member&id=<?= $groupId ?>&member_id=<?= $userId ?>'; }" 
                                                         class="btn btn-danger btn-sm" 
                                                         title="Retirer du groupe">
                                                         🗑️
                                                     </button>
                                                 <?php endif; ?>
                                                 
-                                                <?php if ($member['user_id'] === $_SESSION['user_id'] && $member['role'] !== 'admin'): ?>
+                                                <?php if ($userId === $_SESSION['user_id'] && $role !== 'admin'): ?>
                                                     <button 
                                                         onclick="if(confirm('Quitter ce groupe ?')) { window.location.href='groups.php?action=leave&id=<?= $groupId ?>'; }" 
                                                         class="btn btn-secondary btn-sm" 
@@ -482,8 +480,8 @@ if ($action === 'manage' && $groupId) {
                                                 <?php
                                                 // Vérifier si ce contact est déjà membre
                                                 $isAlreadyMember = false;
-                                                foreach ($groupMembers as $member) {
-                                                    if ($member['user_id'] === $contact->getContactUserId()) {
+                                                foreach ($groupMembers as $userId => $role) {
+                                                    if ($userId === $contact->getContactUserId()) {
                                                         $isAlreadyMember = true;
                                                         break;
                                                     }

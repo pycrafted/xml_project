@@ -40,6 +40,7 @@
                                     <xs:sequence>
                                         <xs:element name="name" type="xs:string"/>
                                         <xs:element name="user_id" type="xs:string"/>
+                                        <xs:element name="contact_user_id" type="xs:string" minOccurs="0"/>
                                     </xs:sequence>
                                     <xs:attribute name="id" type="xs:string" use="required"/>
                                 </xs:complexType>

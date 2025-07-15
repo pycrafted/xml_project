@@ -1,210 +1,200 @@
-# 🎯 WhatsApp Clone - Plateforme de Discussion XML
+# WhatsApp Web Clone
 
-## 📋 **Projet Universitaire - UCAD/DGI/ESP**
-**Professeur :** Ibrahima FALL  
-**Langage :** PHP 8.0+  
-**Stockage :** XML avec validation XSD  
-**Architecture :** Clean Code + SOLID + Tests
+Un clone web de WhatsApp développé en PHP avec une architecture MVC propre et une gestion des données en XML.
 
----
+## 📋 Table des matières
 
-## ✅ **État du Projet : CORE COMPLET**
+- [À propos](#à-propos)
+- [Technologies](#technologies)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Utilisation](#utilisation)
+- [Structure du projet](#structure-du-projet)
+- [Tests](#tests)
+- [Contribution](#contribution)
 
-### 🏗️ **Architecture Réalisée**
+## 🎯 À propos
+
+Ce projet est un clone web de WhatsApp développé dans le cadre du Master en Génie Logiciel à l'UCAD/DGI/ESP. Il permet aux utilisateurs de :
+
+- ✅ S'authentifier de manière sécurisée
+- ✅ Gérer leurs contacts
+- ✅ Envoyer et recevoir des messages en temps réel
+- ✅ Créer et gérer des groupes de discussion
+- ✅ Personnaliser leur profil
+
+## 🛠️ Technologies
+
+- **Backend** : PHP 8.0+
+- **Base de données** : XML avec validation XSD
+- **Frontend** : HTML5, CSS3, JavaScript (Vanilla)
+- **Architecture** : MVC avec Repository Pattern
+- **Tests** : PHPUnit
+- **Gestion des dépendances** : Composer
+
+## 🏗️ Architecture
+
+Le projet suit une architecture MVC stricte avec les patterns suivants :
 
 ```
-xml_project/
-├── src/
-│   ├── Models/           # Modèles métier
-│   │   ├── User.php     ✅ Utilisateur + Settings
-│   │   ├── Message.php  ✅ Messages privés/groupes + fichiers
-│   │   ├── Contact.php  ✅ Contacts utilisateur
-│   │   └── Group.php    ✅ Groupes + membres + rôles
-│   ├── Repositories/     # Accès données XML
-│   │   ├── UserRepository.php    ✅ CRUD Users
-│   │   ├── MessageRepository.php ✅ CRUD Messages + conversations
-│   │   ├── ContactRepository.php ✅ CRUD Contacts
-│   │   └── GroupRepository.php   ✅ CRUD Groupes + membres
-│   └── Utils/
-│       └── XMLManager.php ✅ Gestionnaire XML + validation XSD
-├── schemas/
-│   └── whatsapp_data.xsd ✅ Schéma XML complet
-├── data/                 # Fichiers XML de données
-├── tests/               # Tests unitaires (100% couverture)
-└── docs/               # Documentation
+src/
+├── Models/          # Entités métier
+├── Repositories/    # Couche d'accès aux données
+├── Services/        # Logique métier
+└── Utils/          # Utilitaires (XMLManager)
 ```
 
-### 🔧 **Fonctionnalités Implémentées**
+## 📦 Installation
 
-#### **✅ Gestion Utilisateurs**
-- Création, modification, suppression
-- Settings personnalisés (thème, notifications, etc.)
-- Recherche par email, ID
-- Validation XSD automatique
+### Prérequis
 
-#### **✅ Gestion Messages**
-- Messages privés utilisateur → utilisateur
-- Messages de groupe
-- Messages avec fichiers
-- Statuts : sent/received/read
-- Historique conversations
-- Horodatage automatique
-
-#### **✅ Gestion Contacts**
-- Ajout/suppression contacts
-- Recherche par nom, user_id
-- Liaison avec utilisateurs existants
-
-#### **✅ Gestion Groupes**
-- Création groupes avec description
-- Ajout/suppression membres
-- Rôles : admin/member
-- Recherche par nom, membre, admin
-
-#### **✅ Persistance XML**
-- Stockage 100% XML selon XSD
-- Validation automatique à chaque opération
-- Gestion correcte des namespaces
-- Sauvegarde transactionnelle
-
----
-
-## 🧪 **Tests & Qualité**
-
-### **Tests Réalisés (100% passants)**
-```bash
-php test_setup.php              # ✅ Configuration
-php test_xml_validation.php     # ✅ XML/XSD
-php test_xml_manager.php        # ✅ XMLManager  
-php test_user_repository.php    # ✅ Users
-php test_message_repository.php # ✅ Messages
-php test_contact_repository.php # ✅ Contacts
-php test_group_repository.php   # ✅ Groupes
-```
-
-### **Métriques Qualité**
-- **0 bug** détecté
-- **Tests systématiques** à chaque composant
-- **Gestion d'erreurs** robuste
-- **Documentation complète** (PHPDoc)
-- **Architecture SOLID** respectée
-
----
-
-## 🚀 **Installation & Utilisation**
-
-### **Prérequis**
-- PHP 8.0+ avec extensions : SimpleXML, DOM, LibXML
+- PHP 8.0 ou supérieur
 - Composer
+- Serveur web (Apache/Nginx) ou PHP built-in server
 
-### **Installation**
+### Étapes d'installation
+
+1. **Cloner le repository**
+   ```bash
+   git clone https://github.com/votre-username/whatsapp-web-clone.git
+   cd whatsapp-web-clone
+   ```
+
+2. **Installer les dépendances**
 ```bash
 composer install
 ```
 
-### **Tests**
+3. **Créer les utilisateurs par défaut**
+   ```bash
+   php create_default_user.php
+   ```
+
+4. **Démarrer l'application**
 ```bash
-# Tests individuels
-php test_[composant]_repository.php
+   php start_app.php
+   ```
 
-# Test global
-composer test
+L'application sera accessible à l'adresse : `http://localhost:8080`
+
+## 🚀 Utilisation
+
+### Comptes de démonstration
+
+| Email | Mot de passe | Rôle |
+|-------|--------------|------|
+| admin@whatsapp.com | admin123 | Administrateur |
+| demo@whatsapp.com | demo123 | Utilisateur démo |
+| test@whatsapp.com | test123 | Utilisateur test |
+| alice@test.com | password123 | Utilisateur |
+| bob@test.com | password123 | Utilisateur |
+
+### Fonctionnalités principales
+
+1. **Connexion** : Utilisez l'un des comptes de démonstration
+2. **Gestion des contacts** : Ajoutez des contacts via leur email
+3. **Messagerie** : Envoyez des messages en temps réel
+4. **Groupes** : Créez et gérez des groupes de discussion
+5. **Profil** : Personnalisez votre profil et statut
+
+## 📁 Structure du projet
+
+```
+whatsapp-web-clone/
+├── app.php                 # Point d'entrée principal
+├── start_app.php          # Script de démarrage du serveur
+├── create_default_user.php # Création des utilisateurs par défaut
+├── composer.json          # Dépendances PHP
+├── phpunit.xml           # Configuration des tests
+├── .gitignore            # Fichiers ignorés par Git
+├── README.md             # Documentation
+├── CONTRIBUTING.md       # Guide de contribution
+│
+├── data/                 # Données XML
+│   ├── sample_data.xml   # Données d'exemple
+│   └── *.xml            # Fichiers de données
+│
+├── public/              # Fichiers publics
+│   ├── index.php        # Page d'accueil
+│   ├── dashboard.php    # Tableau de bord
+│   ├── chat.php         # Interface de chat
+│   ├── contacts.php     # Gestion des contacts
+│   ├── groups.php       # Gestion des groupes
+│   ├── profile.php      # Profil utilisateur
+│   ├── ajax.php         # API AJAX
+│   └── assets/          # Ressources statiques
+│       ├── css/         # Styles
+│       └── js/          # Scripts
+│
+├── rapport/             # Documentation technique
+│   ├── ARCHITECTURE.md  # Architecture du projet
+│   └── DEBUGGING_GUIDE.md # Guide de débogage
+│
+├── schemas/             # Schémas XSD
+│   └── whatsapp_data.xsd
+│
+├── src/                 # Code source
+│   ├── Models/          # Modèles
+│   ├── Repositories/    # Repositories
+│   ├── Services/        # Services
+│   └── Utils/           # Utilitaires
+│
+├── tests/               # Tests unitaires et d'intégration
+│   ├── Unit/           # Tests unitaires
+│   └── Integration/    # Tests d'intégration
+│
+├── logs/               # Logs de l'application
+└── vendor/             # Dépendances (généré)
 ```
 
----
+## 🧪 Tests
 
-## 📊 **Structure XML (conforme XSD)**
+### Exécuter les tests
 
-```xml
-<whatsapp_data xmlns="http://whatsapp.clone/data">
-    <users>
-        <user id="user1">
-            <name>John Doe</name>
-            <email>john@example.com</email>
-            <status>active</status>
-            <settings>
-                <setting key="theme" value="dark"/>
-            </settings>
-        </user>
-    </users>
-    
-    <contacts>
-        <contact id="contact1">
-            <name>John Contact</name>
-            <user_id>user1</user_id>
-        </contact>
-    </contacts>
-    
-    <groups>
-        <group id="group1">
-            <name>Famille</name>
-            <description>Groupe familial</description>
-            <members>
-                <member user_id="user1" role="admin"/>
-                <member user_id="user2" role="member"/>
-            </members>
-        </group>
-    </groups>
-    
-    <messages>
-        <message id="msg1">
-            <content>Hello!</content>
-            <type>text</type>
-            <timestamp>2024-12-19 10:30:00</timestamp>
-            <status>sent</status>
-            <from_user>user1</from_user>
-            <to_user>user2</to_user>
-        </message>
-    </messages>
-</whatsapp_data>
+```bash
+# Tous les tests
+./vendor/bin/phpunit
+
+# Tests unitaires uniquement
+./vendor/bin/phpunit --testsuite Unit
+
+# Tests d'intégration uniquement
+./vendor/bin/phpunit --testsuite Integration
+
+# Avec couverture de code
+./vendor/bin/phpunit --coverage-html coverage/
 ```
 
----
+### Structure des tests
 
-## 🏆 **Respect du Cahier des Charges**
+- **Unit/** : Tests unitaires isolés
+- **Integration/** : Tests d'intégration complets
 
-### ✅ **Exigences Techniques**
-- [x] **PHP uniquement** - Respecté
-- [x] **Stockage XML** - 100% XML
-- [x] **Schéma XSD** - Validé automatiquement
-- [x] **SimpleXML/DOM** - Utilisé correctement
-- [x] **Architecture propre** - SOLID + Clean Code
+## 🤝 Contribution
 
-### ✅ **Fonctionnalités Métier**
-- [x] **Messages utilisateur** - Privés + groupes
-- [x] **Gestion fichiers** - Chemin stocké en XML
-- [x] **Contacts** - CRUD complet
-- [x] **Groupes** - Membres + rôles
-- [x] **Profils utilisateurs** - Settings personnalisés
+Les contributions sont les bienvenues ! Pour contribuer :
 
-### ✅ **Qualité Logicielle**
-- [x] **Tests unitaires** - 100% couverture
-- [x] **Documentation** - PHPDoc complet
-- [x] **Gestion erreurs** - Robuste
-- [x] **Code propre** - PSR standards
+1. Forkez le projet
+2. Créez une branche pour votre fonctionnalité (`git checkout -b feature/AmazingFeature`)
+3. Commitez vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Pushez vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrez une Pull Request
 
----
+### Standards de code
 
-## 🎓 **Notes pour la Soutenance**
+- Suivre les standards PSR-12 pour PHP
+- Documenter les méthodes complexes
+- Écrire des tests pour les nouvelles fonctionnalités
+- Maintenir une couverture de code > 80%
 
-### **Points Forts**
-1. **Architecture solide** : Repositories + Models + Services
-2. **Tests exhaustifs** : Chaque composant testé
-3. **XML natif** : Aucune base de données
-4. **Validation XSD** : Données toujours conformes
-5. **Code professionnel** : Standards industrie
+## 📝 Licence
 
-### **Démonstration Possible**
-- Création utilisateurs, contacts, groupes
-- Envoi messages privés et groupes
-- Persistance XML avec validation
-- Tests en direct
+Ce projet est développé dans un cadre académique pour le Master en Génie Logiciel de l'UCAD/DGI/ESP.
+
+## 👥 Auteur
+
+Développé dans le cadre du cours du Professeur Ibrahima FALL - Master Génie Logiciel 2024-2025
 
 ---
 
-## 👥 **Équipe de Développement**
-**Développé avec une approche Test-Driven Development et une architecture Clean Code pour garantir la qualité et la maintenabilité.**
-
----
-
-*Projet réalisé selon les spécifications du Professeur Ibrahima FALL - UCAD/DGI/ESP* 
+*Pour toute question ou support, veuillez ouvrir une issue sur le repository.* 
