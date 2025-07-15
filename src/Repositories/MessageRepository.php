@@ -51,6 +51,14 @@ class MessageRepository
             $messageData['file_path'] = $message->getFilePath();
         }
 
+        if ($message->getFileName()) {
+            $messageData['file_name'] = $message->getFileName();
+        }
+
+        if ($message->getFileSize()) {
+            $messageData['file_size'] = $message->getFileSize();
+        }
+
         return $this->xmlManager->addElement('//wa:messages', 'message', $messageData);
     }
 
@@ -117,6 +125,16 @@ class MessageRepository
                         $filePathNode = $messageXml->children($defaultNS)->file_path;
                         if ($filePathNode && !empty((string) $filePathNode)) {
                             $message->setFilePath((string) $filePathNode);
+                        }
+
+                        $fileNameNode = $messageXml->children($defaultNS)->file_name;
+                        if ($fileNameNode && !empty((string) $fileNameNode)) {
+                            $message->setFileName((string) $fileNameNode);
+                        }
+
+                        $fileSizeNode = $messageXml->children($defaultNS)->file_size;
+                        if ($fileSizeNode && !empty((string) $fileSizeNode)) {
+                            $message->setFileSize((int) $fileSizeNode);
                         }
                         
                         $messages[] = $message;
@@ -341,6 +359,16 @@ class MessageRepository
         $filePathElement = $element->getElementsByTagName('file_path')->item(0);
         if ($filePathElement) {
             $message->setFilePath($filePathElement->textContent);
+        }
+
+        $fileNameElement = $element->getElementsByTagName('file_name')->item(0);
+        if ($fileNameElement) {
+            $message->setFileName($fileNameElement->textContent);
+        }
+
+        $fileSizeElement = $element->getElementsByTagName('file_size')->item(0);
+        if ($fileSizeElement) {
+            $message->setFileSize((int) $fileSizeElement->textContent);
         }
 
         return $message;

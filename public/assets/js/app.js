@@ -48,6 +48,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Gestion du bouton de sélection de fichier
+    const fileButton = document.getElementById('file-button');
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const fileInfo = document.getElementById('file-info');
+    const removeFileButton = document.getElementById('remove-file');
+    
+    if (fileButton && fileInput) {
+        fileButton.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileSelection(file);
+            }
+        });
+    }
+    
+    if (removeFileButton) {
+        removeFileButton.addEventListener('click', function() {
+            clearFileSelection();
+        });
+    }
+
     // Auto-scroll des messages
     const chatMessages = document.querySelector('.chat-messages');
     if (chatMessages) {
@@ -336,9 +362,9 @@ function showAlert(message, type = 'info', persistent = false) {
     if (!persistent) {
         // Durées augmentées: 30s en debug, 8s normal
         const hideDelay = AlertManager.debugMode ? 30000 : 8000; // 30s en debug, 8s normal
-        setTimeout(() => {
+    setTimeout(() => {
             alertDiv.style.transition = 'opacity 0.5s ease-out';
-            alertDiv.style.opacity = '0';
+        alertDiv.style.opacity = '0';
             setTimeout(() => alertDiv.remove(), 500);
         }, hideDelay);
     }
@@ -620,9 +646,12 @@ function sendMessage() {
     
     // Validation unifiée du message
     const content = messageInput.value.trim();
-    if (!content) {
-        Logger.error('Message vide');
-        showAlert('Veuillez saisir un message', 'error');
+    const fileInputElement = document.getElementById('file-input');
+    const hasFile = fileInputElement && fileInputElement.files.length > 0;
+    
+    if (!content && !hasFile) {
+        Logger.error('Message vide sans fichier');
+        showAlert('Veuillez saisir un message ou sélectionner un fichier', 'error');
         messageInput.focus();
         return;
     }
@@ -638,6 +667,12 @@ function sendMessage() {
     formData.append('action', 'send_message');
     formData.append('content', content);
     formData.append('type', 'text');
+    
+    // Vérifier s'il y a un fichier sélectionné
+    if (fileInputElement && fileInputElement.files.length > 0) {
+        formData.append('file', fileInputElement.files[0]);
+        Logger.info('Fichier attaché: ' + fileInputElement.files[0].name);
+    }
     
     Logger.debug('Contenu du message', { content: content });
     
@@ -680,6 +715,10 @@ function sendMessage() {
             // Ajouter le message à l'interface
             addMessageToChat(data.message, 'sent');
             messageInput.value = '';
+            
+            // Nettoyer la sélection de fichier
+            clearFileSelection();
+            
             scrollToBottom(chatMessages);
             Logger.success('Message envoyé avec succès');
             
@@ -726,7 +765,42 @@ function addMessageToChat(messageData, type = 'received') {
         messageHtml += `<div style="font-size: 12px; color: #00a884; margin-bottom: 5px;">${escapeHtml(messageData.sender_name)}</div>`;
     }
     
-    messageHtml += `<div class="message-content">${escapeHtml(messageData.content)}</div>`;
+    // Contenu du message
+    if (messageData.type === 'file' && messageData.file) {
+        messageHtml += `<div class="message-content">`;
+        
+        // Afficher la prévisualisation pour les images
+        if (messageData.file.is_image) {
+            messageHtml += `<div style="margin-bottom: 5px;">
+                <img src="${messageData.file.path}" alt="${escapeHtml(messageData.file.name)}" 
+                     style="max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer;"
+                     onclick="window.open('${messageData.file.path}', '_blank')">
+            </div>`;
+        }
+        
+        // Informations du fichier
+        messageHtml += `<div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 8px;">
+            <span style="font-size: 18px;">${getFileIcon(messageData.file.type || 'application/octet-stream')}</span>
+            <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 13px;">${escapeHtml(messageData.file.name)}</div>
+                <div style="font-size: 11px; opacity: 0.7;">${messageData.file.formatted_size || formatFileSize(messageData.file.size)}</div>
+            </div>
+                         <a href="download.php?file=${encodeURIComponent(messageData.file.path)}&message=${encodeURIComponent(messageData.id)}" 
+                style="color: #00a884; text-decoration: none; font-size: 12px;">
+                 📥 Télécharger
+             </a>
+        </div>`;
+        
+        // Texte accompagnant le fichier si présent
+        if (messageData.content && messageData.content !== messageData.file.name) {
+            messageHtml += `<div style="margin-top: 8px;">${escapeHtml(messageData.content)}</div>`;
+        }
+        
+        messageHtml += `</div>`;
+    } else {
+        messageHtml += `<div class="message-content">${escapeHtml(messageData.content)}</div>`;
+    }
+    
     messageHtml += `<div class="message-time">${messageData.timestamp || new Date().toLocaleTimeString()}`;
     
     // Ajouter les indicateurs de statut pour les messages envoyés
@@ -1047,35 +1121,129 @@ function confirmDelete(itemType, itemId, itemName) {
 }
 
 /**
- * Gestion des uploads de fichiers
+ * Gestion de la sélection de fichier
  */
-function handleFileUpload() {
-    const fileInput = document.getElementById('file-input');
-    if (fileInput) {
-        fileInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
-                // Vérification de la taille (max 10MB)
-                if (file.size > 10 * 1024 * 1024) {
-                    showAlert('Le fichier ne doit pas dépasser 10MB', 'error');
-                    this.value = '';
-                    return;
-                }
-                
-                // Vérification du type
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain'];
-                if (!allowedTypes.includes(file.type)) {
-                    showAlert('Type de fichier non autorisé', 'error');
-                    this.value = '';
-                    return;
-                }
-                
-                showAlert(`Fichier "${file.name}" sélectionné`, 'info');
-            }
-        });
+function handleFileSelection(file) {
+    // Vérification de la taille (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        showAlert('Le fichier ne doit pas dépasser 10MB', 'error');
+        clearFileSelection();
+        return;
+    }
+    
+    // Vérification du type
+    const allowedTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/svg+xml',
+        'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain', 'text/rtf', 'application/zip', 'application/x-rar-compressed',
+        'audio/mpeg', 'audio/mp3', 'video/mp4', 'video/avi', 'video/quicktime', 'video/x-ms-wmv'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+        showAlert('Type de fichier non autorisé', 'error');
+        clearFileSelection();
+        return;
+    }
+    
+    // Afficher la prévisualisation
+    showFilePreview(file);
+    showAlert(`Fichier "${file.name}" sélectionné`, 'info');
+}
+
+/**
+ * Affiche la prévisualisation du fichier
+ */
+function showFilePreview(file) {
+    const filePreview = document.getElementById('file-preview');
+    const fileInfo = document.getElementById('file-info');
+    
+    if (filePreview && fileInfo) {
+        // Formater la taille
+        const size = formatFileSize(file.size);
+        
+        // Obtenir l'icône selon le type
+        const icon = getFileIcon(file.type);
+        
+        fileInfo.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <span style="font-size: 16px;">${icon}</span>
+                <div>
+                    <div style="font-weight: bold;">${escapeHtml(file.name)}</div>
+                    <div style="color: #8696a0;">${size}</div>
+                </div>
+            </div>
+        `;
+        
+        filePreview.style.display = 'block';
+        
+        // Mettre à jour le placeholder de l'input
+        const messageInput = document.getElementById('message-input');
+        if (messageInput) {
+            messageInput.placeholder = 'Ajouter un message (optionnel)...';
+        }
     }
 }
 
-// Initialiser la gestion des uploads
-handleFileUpload(); 
-handleFileUpload(); 
+/**
+ * Supprime la sélection de fichier
+ */
+function clearFileSelection() {
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const messageInput = document.getElementById('message-input');
+    
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    
+    if (filePreview) {
+        filePreview.style.display = 'none';
+    }
+    
+    if (messageInput) {
+        messageInput.placeholder = 'Tapez votre message...';
+    }
+}
+
+/**
+ * Formate la taille du fichier
+ */
+function formatFileSize(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    
+    while (bytes >= 1024 && i < units.length - 1) {
+        bytes /= 1024;
+        i++;
+    }
+    
+    return Math.round(bytes * 100) / 100 + ' ' + units[i];
+}
+
+/**
+ * Obtient l'icône selon le type de fichier
+ */
+function getFileIcon(mimeType) {
+    if (mimeType.startsWith('image/')) {
+        return '🖼️';
+    } else if (mimeType.startsWith('video/')) {
+        return '🎥';
+    } else if (mimeType.startsWith('audio/')) {
+        return '🎵';
+    } else if (mimeType === 'application/pdf') {
+        return '📄';
+    } else if (mimeType.includes('word') || mimeType.includes('document')) {
+        return '📝';
+    } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
+        return '📊';
+    } else if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) {
+        return '📽️';
+    } else if (mimeType.includes('zip') || mimeType.includes('rar')) {
+        return '📦';
+    } else {
+        return '📄';
+    }
+} 
+// Gestion des fichiers initialisée dans le DOMContentLoaded 

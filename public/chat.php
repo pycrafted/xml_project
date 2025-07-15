@@ -331,7 +331,57 @@ try {
                                     
                                     <div class="message-content">
                                         <?php if ($message->getType() === 'file'): ?>
-                                            📎 <em>Fichier : <?= htmlspecialchars($message->getContent()) ?></em>
+                                            <?php if ($message->getFilePath()): ?>
+                                                <div class="file-message">
+                                                    <?php if ($message->isImage()): ?>
+                                                        <!-- Prévisualisation image -->
+                                                        <div style="margin-bottom: 8px;">
+                                                            <img src="<?= htmlspecialchars($message->getFilePath()) ?>" 
+                                                                 alt="<?= htmlspecialchars($message->getFileName() ?: 'Image') ?>"
+                                                                 style="max-width: 250px; max-height: 200px; border-radius: 8px; cursor: pointer;"
+                                                                 onclick="window.open('<?= htmlspecialchars($message->getFilePath()) ?>', '_blank')">
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    
+                                                    <!-- Informations du fichier -->
+                                                    <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px;">
+                                                        <span style="font-size: 20px;">
+                                                            <?php
+                                                            if ($message->isImage()) {
+                                                                echo '🖼️';
+                                                            } elseif (strpos($message->getFileName() ?: '', '.pdf') !== false) {
+                                                                echo '📄';
+                                                            } elseif (strpos($message->getFileName() ?: '', '.doc') !== false) {
+                                                                echo '📝';
+                                                            } else {
+                                                                echo '📎';
+                                                            }
+                                                            ?>
+                                                        </span>
+                                                        <div style="flex: 1;">
+                                                            <div style="font-weight: bold; font-size: 13px;">
+                                                                <?= htmlspecialchars($message->getFileName() ?: 'Fichier') ?>
+                                                            </div>
+                                                            <div style="font-size: 11px; color: #8696a0;">
+                                                                <?= htmlspecialchars($message->getFormattedFileSize()) ?>
+                                                            </div>
+                                                        </div>
+                                                        <a href="download.php?file=<?= urlencode($message->getFilePath()) ?>&message=<?= urlencode($message->getId()) ?>" 
+                                                           style="color: #00a884; text-decoration: none; font-size: 12px; padding: 5px 10px; border: 1px solid #00a884; border-radius: 5px;">
+                                                            📥 Télécharger
+                                                        </a>
+                                                    </div>
+                                                    
+                                                    <!-- Texte accompagnant le fichier -->
+                                                    <?php if ($message->getContent() && $message->getContent() !== $message->getFileName()): ?>
+                                                        <div style="margin-top: 8px; font-size: 14px;">
+                                                            <?= nl2br(htmlspecialchars($message->getContent())) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php else: ?>
+                                                📎 <em>Fichier : <?= htmlspecialchars($message->getContent()) ?></em>
+                                            <?php endif; ?>
                                         <?php else: ?>
                                             <?= nl2br(htmlspecialchars($message->getContent())) ?>
                                         <?php endif; ?>
@@ -365,12 +415,36 @@ try {
                             </div>
                         <?php endif; ?>
                         
-                        <form id="chat-form" style="display: flex; gap: 10px; width: 100%;">
+                        <form id="chat-form" style="display: flex; gap: 10px; width: 100%; align-items: flex-end;">
                             <input type="hidden" id="conversation-id" value="<?= $conversationType ?>_<?= htmlspecialchars($activeConversation->getId()) ?>">
                             
                             <?php if ($conversationType === 'contact'): ?>
                                 <input type="hidden" id="recipient-id" value="<?= htmlspecialchars($activeConversation->getContactUserId()) ?>">
                             <?php endif; ?>
+                            
+                            <!-- Bouton de sélection de fichier -->
+                            <div style="position: relative;">
+                                <input 
+                                    type="file" 
+                                    id="file-input" 
+                                    name="file"
+                                    style="display: none;"
+                                    accept="image/jpeg,image/jpg,image/png,image/gif,image/bmp,image/webp,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/rtf,application/zip,application/x-rar-compressed,audio/mpeg,audio/mp3,video/mp4,video/avi,video/quicktime,video/x-ms-wmv"
+                                >
+                                <button type="button" id="file-button" style="background: #667781; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Joindre un fichier">
+                                    📎
+                                </button>
+                            </div>
+                            
+                            <!-- Zone de prévisualisation du fichier -->
+                            <div id="file-preview" style="display: none; background: #f0f2f5; padding: 10px; border-radius: 10px; margin-right: 10px; max-width: 200px;">
+                                <div id="file-info" style="font-size: 12px; color: #667781;"></div>
+                                <div style="margin-top: 5px;">
+                                    <button type="button" id="remove-file" style="background: #dc3545; color: white; border: none; border-radius: 5px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
+                                        ✕ Supprimer
+                                    </button>
+                                </div>
+                            </div>
                             
                             <input 
                                 type="text" 
@@ -379,7 +453,7 @@ try {
                                 style="flex: 1;"
                             >
                             
-                            <button type="submit" style="background: #00a884; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">
+                            <button type="submit" id="send-button" style="background: #00a884; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">
                                 ➤
                             </button>
                         </form>

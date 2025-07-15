@@ -88,6 +88,9 @@
                                         <xs:element name="from_user" type="xs:string"/>
                                         <xs:element name="to_user" type="xs:string" minOccurs="0"/>
                                         <xs:element name="to_group" type="xs:string" minOccurs="0"/>
+                                        <xs:element name="file_path" type="xs:string" minOccurs="0"/>
+                                        <xs:element name="file_name" type="xs:string" minOccurs="0"/>
+                                        <xs:element name="file_size" type="xs:long" minOccurs="0"/>
                                     </xs:sequence>
                                     <xs:attribute name="id" type="xs:string" use="required"/>
                                 </xs:complexType>

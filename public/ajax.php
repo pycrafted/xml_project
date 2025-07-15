@@ -8,6 +8,7 @@ require_once '../vendor/autoload.php';
 
 use WhatsApp\Services\UserService;
 use WhatsApp\Services\MessageService;
+use WhatsApp\Services\FileUploadService;
 use WhatsApp\Repositories\ContactRepository;
 use WhatsApp\Repositories\GroupRepository;
 use WhatsApp\Repositories\MessageRepository;
@@ -41,6 +42,7 @@ if (!isset($_SESSION['user_id'])) {
 $xmlManager = new WhatsApp\Utils\XMLManager();
 $userService = new UserService($xmlManager);
 $messageService = new MessageService($xmlManager);
+$fileUploadService = new FileUploadService();
 $contactRepo = new ContactRepository($xmlManager);
 $groupRepo = new GroupRepository($xmlManager);
 $messageRepo = new MessageRepository($xmlManager);
@@ -56,18 +58,39 @@ try {
         // ===========================================
         
         case 'send_message':
-                    debugLog("Send message request: " . json_encode([
-            'user_id' => $_SESSION['user_id'],
-            'content_length' => strlen($_POST['content'] ?? ''),
-            'recipient_id' => $_POST['recipient_id'] ?? '',
-            'type' => $_POST['type'] ?? 'text'
-        ]));
+            debugLog("Send message request: " . json_encode([
+                'user_id' => $_SESSION['user_id'],
+                'content_length' => strlen($_POST['content'] ?? ''),
+                'recipient_id' => $_POST['recipient_id'] ?? '',
+                'type' => $_POST['type'] ?? 'text',
+                'has_file' => isset($_FILES['file']) ? 'yes' : 'no'
+            ]));
             
             $content = trim($_POST['content'] ?? '');
             $recipientId = $_POST['recipient_id'] ?? '';
             $type = $_POST['type'] ?? 'text';
+            $fileInfo = null;
             
-            if (empty($content)) {
+            // Gérer l'upload de fichier si présent
+            if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+                try {
+                    $fileInfo = $fileUploadService->uploadFile($_FILES['file'], $_SESSION['user_id']);
+                    $type = 'file';
+                    
+                    // Si pas de contenu texte, utiliser le nom du fichier
+                    if (empty($content)) {
+                        $content = $fileInfo['file_name'];
+                    }
+                    
+                    debugLog("File uploaded for message: " . $fileInfo['file_path']);
+                } catch (Exception $e) {
+                    debugLog("ERROR: File upload failed - " . $e->getMessage());
+                    throw new Exception('Erreur d\'upload : ' . $e->getMessage());
+                }
+            }
+            
+            // Vérifier que le message n'est pas vide (texte ou fichier)
+            if (empty($content) && !$fileInfo) {
                 debugLog("WARNING: Message vide - user_id: " . $_SESSION['user_id']);
                 throw new Exception('Le message ne peut pas être vide');
             }
@@ -77,13 +100,23 @@ try {
                 throw new Exception('Destinataire non spécifié');
             }
             
-            debugLog("Tentative d'envoi de message - from: " . $_SESSION['user_id'] . " to: " . $recipientId . " content: " . substr($content, 0, 50) . '...');
+            debugLog("Tentative d'envoi de message - from: " . $_SESSION['user_id'] . " to: " . $recipientId . " type: " . $type);
             
             $message = $messageService->sendPrivateMessage($_SESSION['user_id'], $recipientId, $content, $type);
             
+            // Ajouter les informations du fichier si présent
+            if ($fileInfo) {
+                $message->setFilePath($fileInfo['file_path']);
+                $message->setFileName($fileInfo['file_name']);
+                $message->setFileSize($fileInfo['file_size']);
+                
+                // Mettre à jour le message dans la base
+                $messageRepo->update($message);
+            }
+            
             debugLog("SUCCESS: Message envoyé - message_id: " . $message->getId() . " from: " . $_SESSION['user_id'] . " to: " . $recipientId);
             
-            echo json_encode([
+            $response = [
                 'success' => true,
                 'message' => [
                     'id' => $message->getId(),
@@ -92,15 +125,56 @@ try {
                     'timestamp' => date('Y-m-d H:i:s'),
                     'from_user_id' => $_SESSION['user_id']
                 ]
-            ]);
+            ];
+            
+            // Ajouter les informations du fichier à la réponse
+            if ($fileInfo) {
+                $response['message']['file'] = [
+                    'path' => $fileInfo['file_path'],
+                    'name' => $fileInfo['file_name'],
+                    'size' => $fileInfo['file_size'],
+                    'formatted_size' => $message->getFormattedFileSize(),
+                    'is_image' => $message->isImage()
+                ];
+            }
+            
+            echo json_encode($response);
             break;
             
         case 'send_group_message':
+            debugLog("Send group message request: " . json_encode([
+                'user_id' => $_SESSION['user_id'],
+                'content_length' => strlen($_POST['content'] ?? ''),
+                'group_id' => $_POST['group_id'] ?? '',
+                'type' => $_POST['type'] ?? 'text',
+                'has_file' => isset($_FILES['file']) ? 'yes' : 'no'
+            ]));
+            
             $content = trim($_POST['content'] ?? '');
             $groupId = $_POST['group_id'] ?? '';
             $type = $_POST['type'] ?? 'text';
+            $fileInfo = null;
             
-            if (empty($content)) {
+            // Gérer l'upload de fichier si présent
+            if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+                try {
+                    $fileInfo = $fileUploadService->uploadFile($_FILES['file'], $_SESSION['user_id']);
+                    $type = 'file';
+                    
+                    // Si pas de contenu texte, utiliser le nom du fichier
+                    if (empty($content)) {
+                        $content = $fileInfo['file_name'];
+                    }
+                    
+                    debugLog("File uploaded for group message: " . $fileInfo['file_path']);
+                } catch (Exception $e) {
+                    debugLog("ERROR: File upload failed - " . $e->getMessage());
+                    throw new Exception('Erreur d\'upload : ' . $e->getMessage());
+                }
+            }
+            
+            // Vérifier que le message n'est pas vide (texte ou fichier)
+            if (empty($content) && !$fileInfo) {
                 throw new Exception('Le message ne peut pas être vide');
             }
             
@@ -109,6 +183,16 @@ try {
             }
             
             $message = $messageService->sendGroupMessage($_SESSION['user_id'], $groupId, $content, $type);
+            
+            // Ajouter les informations du fichier si présent
+            if ($fileInfo) {
+                $message->setFilePath($fileInfo['file_path']);
+                $message->setFileName($fileInfo['file_name']);
+                $message->setFileSize($fileInfo['file_size']);
+                
+                // Mettre à jour le message dans la base
+                $messageRepo->update($message);
+            }
             
             // Récupérer le nom de l'expéditeur pour les messages de groupe
             $senderName = '';
@@ -119,7 +203,9 @@ try {
                 $senderName = 'Utilisateur inconnu';
             }
             
-            echo json_encode([
+            debugLog("SUCCESS: Group message sent - message_id: " . $message->getId() . " group_id: " . $groupId);
+            
+            $response = [
                 'success' => true,
                 'message' => [
                     'id' => $message->getId(),
@@ -131,7 +217,20 @@ try {
                     'sender_name' => $senderName,
                     'is_sent' => true
                 ]
-            ]);
+            ];
+            
+            // Ajouter les informations du fichier à la réponse
+            if ($fileInfo) {
+                $response['message']['file'] = [
+                    'path' => $fileInfo['file_path'],
+                    'name' => $fileInfo['file_name'],
+                    'size' => $fileInfo['file_size'],
+                    'formatted_size' => $message->getFormattedFileSize(),
+                    'is_image' => $message->isImage()
+                ];
+            }
+            
+            echo json_encode($response);
             break;
             
         case 'get_messages':
@@ -197,6 +296,18 @@ try {
                     } catch (Exception $e) {
                         $messageData['sender_name'] = 'Utilisateur inconnu';
                     }
+                }
+                
+                // Ajouter les informations du fichier si c'est un message avec fichier
+                if ($message->getType() === 'file' && $message->getFilePath()) {
+                    $messageData['file'] = [
+                        'path' => $message->getFilePath(),
+                        'name' => $message->getFileName() ?: basename($message->getFilePath()),
+                        'size' => $message->getFileSize() ?: 0,
+                        'formatted_size' => $message->getFormattedFileSize(),
+                        'is_image' => $message->isImage(),
+                        'extension' => $message->getFileExtension()
+                    ];
                 }
                 
                 $formattedMessages[] = $messageData;
@@ -488,30 +599,32 @@ try {
                 throw new Exception('Aucun fichier sélectionné');
             }
             
-            $file = $_FILES['file'];
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain'];
-            $maxSize = 10 * 1024 * 1024; // 10MB
+            debugLog("File upload request: " . json_encode([
+                'user_id' => $_SESSION['user_id'],
+                'file_name' => $_FILES['file']['name'],
+                'file_size' => $_FILES['file']['size'],
+                'file_type' => $_FILES['file']['type']
+            ]));
             
-            if ($file['size'] > $maxSize) {
-                throw new Exception('Fichier trop volumineux (max 10MB)');
+            try {
+                $fileInfo = $fileUploadService->uploadFile($_FILES['file'], $_SESSION['user_id']);
+                
+                debugLog("SUCCESS: File uploaded - path: " . $fileInfo['file_path']);
+                
+                echo json_encode([
+                    'success' => true,
+                    'file' => [
+                        'path' => $fileInfo['file_path'],
+                        'name' => $fileInfo['file_name'],
+                        'size' => $fileInfo['file_size'],
+                        'type' => $fileInfo['mime_type'],
+                        'url' => $fileInfo['file_path']
+                    ]
+                ]);
+            } catch (Exception $e) {
+                debugLog("ERROR: File upload failed - " . $e->getMessage());
+                throw new Exception('Erreur d\'upload : ' . $e->getMessage());
             }
-            
-            if (!in_array($file['type'], $allowedTypes)) {
-                throw new Exception('Type de fichier non autorisé');
-            }
-            
-            // Simuler l'upload (ne pas vraiment sauvegarder le fichier)
-            $fileName = 'file_' . time() . '_' . $file['name'];
-            
-            echo json_encode([
-                'success' => true,
-                'file' => [
-                    'name' => $fileName,
-                    'size' => $file['size'],
-                    'type' => $file['type'],
-                    'url' => '/uploads/' . $fileName // URL fictive
-                ]
-            ]);
             break;
             
         default:

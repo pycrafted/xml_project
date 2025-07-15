@@ -1,0 +1,30 @@
+# Sécurité du répertoire uploads
+# Interdire l'exécution de scripts PHP
+<Files "*.php">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Interdire l'exécution de scripts potentiellement dangereux
+<Files ~ "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|aspx|cgi|sh)$">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Autoriser seulement certains types de fichiers
+<Files ~ "\.(jpg|jpeg|png|gif|bmp|webp|svg|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|rtf|zip|rar|mp3|mp4|avi|mov|wmv)$">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Désactiver les index automatiques
+Options -Indexes
+
+# Limiter la taille des uploads (10MB)
+php_value upload_max_filesize 10M
+php_value post_max_size 10M
+
+# Headers de sécurité
+Header set X-Content-Type-Options nosniff
+Header set X-Frame-Options DENY
+Header set X-XSS-Protection "1; mode=block" 
