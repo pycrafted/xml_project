@@ -409,12 +409,12 @@ try {
 
                     <!-- Formulaire d'envoi -->
                     <div class="chat-input">
-                        <?php if ($error): ?>
+                        <?php if (
+                            $error): ?>
                             <div class="alert alert-error" style="margin: 0 0 10px 0; padding: 10px;">
                                 <?= htmlspecialchars($error) ?>
                             </div>
                         <?php endif; ?>
-                        
                         <form id="chat-form" style="display: flex; gap: 10px; width: 100%; align-items: flex-end;">
                             <input type="hidden" id="conversation-id" value="<?= $conversationType ?>_<?= htmlspecialchars($activeConversation->getId()) ?>">
                             
@@ -422,6 +422,13 @@ try {
                                 <input type="hidden" id="recipient-id" value="<?= htmlspecialchars($activeConversation->getContactUserId()) ?>">
                             <?php endif; ?>
                             
+                            <!-- Bouton emoji -->
+                            <div style="position: relative;">
+                                <button type="button" id="emoji-button" style="background: #e3f2fd; color: #1976d2; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center;" title="Émojis">😀</button>
+                                <div id="emoji-picker" style="display: none; position: absolute; bottom: 50px; left: 0; background: #fff; border: 1px solid #d1d7db; border-radius: 10px; box-shadow: 0 2px 8px rgba(33,150,243,0.08); padding: 10px; z-index: 1000; max-width: 300px; max-height: 200px; overflow-y: auto; font-size: 22px;">
+                                    <!-- Les émojis seront injectés ici par JS -->
+                                </div>
+                            </div>
                             <!-- Bouton de sélection de fichier -->
                             <div style="position: relative;">
                                 <input 
