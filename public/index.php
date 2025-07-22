@@ -1,6 +1,6 @@
 <?php
 /**
- * WhatsApp Web Clone - Page d'accueil
+ * Wakhtaan - Page d'accueil
  * Page principale de l'interface web avec authentification
  */
 
@@ -21,10 +21,12 @@ $userRepository = new UserRepository($xmlManager);
 $contactRepository = new ContactRepository($xmlManager);
 
 // Variables de template
-$pageTitle = "WhatsApp Web Clone";
+$pageTitle = "Wakhtaan";
 $currentUser = null;
 $error = '';
 $success = '';
+$signup_error = '';
+$signup_success = '';
 
 // Gestion de l'authentification
 // Gestion de la déconnexion via GET
@@ -44,36 +46,48 @@ if ($_POST && isset($_POST['action'])) {
                 $error = "Email et mot de passe sont requis";
             } else {
                 try {
-                    // Vérifier les credentials avec les comptes par défaut
-                    $validCredentials = [
-                        'admin@whatsapp.com' => 'admin123',
-                        'demo@whatsapp.com' => 'demo123',
-                        'test@whatsapp.com' => 'test123',
-                        'alice@test.com' => 'password123',
-                        'bob@test.com' => 'password123',
-                        'charlie@test.com' => 'password123',
-                        'diana@test.com' => 'password123',
-                        'erik@test.com' => 'password123'
-                    ];
-                    
-                    if (isset($validCredentials[$email]) && $validCredentials[$email] === $password) {
-                        // Chercher l'utilisateur existant
-                        $users = $userRepository->findByEmail($email);
-                        $user = !empty($users) ? $users[0] : null;
-                        
-                        if ($user) {
+                    // 1. Chercher l'utilisateur dans la base XML
+                    $users = $userRepository->findByEmail($email);
+                    $user = !empty($users) ? $users[0] : null;
+                    if ($user) {
+                        $settings = $user->getSettings();
+                        if (isset($settings['password_hash']) && password_verify($password, $settings['password_hash'])) {
+                            // Connexion réussie
                             $_SESSION['user_id'] = $user->getId();
                             $_SESSION['user_name'] = $user->getName();
                             $_SESSION['user_email'] = $user->getEmail();
-                            
-                            // Redirection vers le dashboard
                             header('Location: dashboard.php');
                             exit;
                         } else {
-                            $error = "Utilisateur non trouvé";
+                            $error = "Email ou mot de passe incorrect";
                         }
                     } else {
-                        $error = "Email ou mot de passe incorrect";
+                        // Fallback : comptes de démo codés en dur
+                        $validCredentials = [
+                            'admin@whatsapp.com' => 'admin123',
+                            'demo@whatsapp.com' => 'demo123',
+                            'test@whatsapp.com' => 'test123',
+                            'alice@test.com' => 'password123',
+                            'bob@test.com' => 'password123',
+                            'charlie@test.com' => 'password123',
+                            'diana@test.com' => 'password123',
+                            'erik@test.com' => 'password123'
+                        ];
+                        if (isset($validCredentials[$email]) && $validCredentials[$email] === $password) {
+                            $users = $userRepository->findByEmail($email);
+                            $user = !empty($users) ? $users[0] : null;
+                            if ($user) {
+                                $_SESSION['user_id'] = $user->getId();
+                                $_SESSION['user_name'] = $user->getName();
+                                $_SESSION['user_email'] = $user->getEmail();
+                                header('Location: dashboard.php');
+                                exit;
+                            } else {
+                                $error = "Utilisateur non trouvé";
+                            }
+                        } else {
+                            $error = "Email ou mot de passe incorrect";
+                        }
                     }
                 } catch (Exception $e) {
                     $error = "Erreur lors de la connexion : " . $e->getMessage();
@@ -137,6 +151,54 @@ if ($_POST && isset($_POST['action'])) {
                     }
                 } catch (Exception $e) {
                     $error = "Erreur lors de la création du contact : " . $e->getMessage();
+                }
+            }
+            break;
+            
+        case 'register':
+            function log_register_debug($msg) {
+                file_put_contents(__DIR__ . '/../data/register_debug.log', date('Y-m-d H:i:s') . ' ' . $msg . "\n", FILE_APPEND);
+            }
+            log_register_debug('Début inscription: ' . json_encode($_POST));
+            $signup_name = trim($_POST['signup_name'] ?? '');
+            $signup_email = trim($_POST['signup_email'] ?? '');
+            $signup_password = $_POST['signup_password'] ?? '';
+            $signup_password_confirm = $_POST['signup_password_confirm'] ?? '';
+
+            // Validation
+            if (empty($signup_name) || empty($signup_email) || empty($signup_password) || empty($signup_password_confirm)) {
+                $signup_error = "Tous les champs sont obligatoires.";
+                log_register_debug('Erreur: champs manquants');
+            } elseif (!filter_var($signup_email, FILTER_VALIDATE_EMAIL)) {
+                $signup_error = "Format d'email invalide.";
+                log_register_debug('Erreur: email invalide');
+            } elseif (strlen($signup_password) < 6) {
+                $signup_error = "Le mot de passe doit contenir au moins 6 caractères.";
+                log_register_debug('Erreur: mot de passe trop court');
+            } elseif ($signup_password !== $signup_password_confirm) {
+                $signup_error = "Les mots de passe ne correspondent pas.";
+                log_register_debug('Erreur: mots de passe différents');
+            } else {
+                // Vérifier unicité email
+                $existingUsers = $userRepository->findByEmail($signup_email);
+                log_register_debug('Utilisateurs existants pour cet email: ' . count($existingUsers));
+                if (!empty($existingUsers)) {
+                    $signup_error = "Un utilisateur avec cet email existe déjà.";
+                    log_register_debug('Erreur: email déjà utilisé');
+                } else {
+                    // Générer un ID unique
+                    $user_id = 'user_' . time() . '_' . bin2hex(random_bytes(4));
+                    $settings = [
+                        'password_hash' => password_hash($signup_password, PASSWORD_DEFAULT)
+                    ];
+                    try {
+                        $userService->createUser($user_id, $signup_name, $signup_email, $settings);
+                        $signup_success = "Inscription réussie ! Vous pouvez maintenant vous connecter.";
+                        log_register_debug('Succès: utilisateur créé avec id ' . $user_id);
+                    } catch (Exception $e) {
+                        $signup_error = $e->getMessage();
+                        log_register_debug('Exception: ' . $e->getMessage());
+                    }
                 }
             }
             break;
@@ -273,144 +335,242 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
         <?php else: ?>
-            <!-- Page de connexion -->
-            <div class="form-container" style="margin-top: 10vh;">
-                <div class="text-center" style="margin-bottom: 30px;">
-                    <h1 style="color: #00a884; margin-bottom: 10px;">💬 WhatsApp Web</h1>
-                    <p style="color: #667781;">Plateforme de discussions en ligne</p>
+            <!-- Nouvelle page de connexion moderne et épurée -->
+            <style>
+                body {
+                    min-height: 100vh;
+                    height: 100vh;
+                    background: linear-gradient(135deg, #e3f2fd 0%, #2196f3 100%);
+                    margin: 0;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                }
+                .login-center-wrapper {
+                    min-height: 100vh;
+                    height: 100vh;
+                    width: 100vw;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .login-card {
+                    background: rgba(255,255,255,0.98);
+                    border-radius: 18px;
+                    box-shadow: 0 8px 32px rgba(33,150,243,0.08);
+                    padding: 40px 32px 32px 32px;
+                    max-width: 400px;
+                    width: 100%;
+                    margin: 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .login-title {
+                    color: #1976d2;
+                    font-size: 2.1rem;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                    text-align: center;
+                    letter-spacing: -1px;
+                }
+                .login-subtitle {
+                    color: #667781;
+                    font-size: 1.08rem;
+                    text-align: center;
+                    margin-bottom: 28px;
+                }
+                .form-group {
+                    margin-bottom: 22px;
+                }
+                .form-group label {
+                    font-weight: 500;
+                    color: #54656f;
+                    margin-bottom: 7px;
+                    display: block;
+                }
+                .form-control {
+                    width: 100%;
+                    padding: 12px 15px;
+                    border: 1px solid #d1d7db;
+                    border-radius: 7px;
+                    font-size: 1rem;
+                    background: #f8f9fa;
+                    transition: border-color 0.3s;
+                }
+                .form-control:focus {
+                    outline: none;
+                    border-color: #2196f3;
+                    box-shadow: 0 0 0 2px rgba(33,150,243,0.13);
+                }
+                .btn-login {
+                    width: 100%;
+                    background: #2196f3;
+                    color: #fff;
+                    border: none;
+                    border-radius: 7px;
+                    padding: 13px 0;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    box-shadow: 0 2px 8px rgba(33,150,243,0.08);
+                    transition: background 0.2s;
+                    margin-top: 8px;
+                    cursor: pointer;
+                }
+                .btn-login:hover {
+                    background: #1976d2;
+                }
+                .btn-signup {
+                    width: 100%;
+                    background: #e3f2fd;
+                    color: #1976d2;
+                    border: 1px solid #2196f3;
+                    border-radius: 7px;
+                    padding: 13px 0;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    margin-top: 12px;
+                    transition: background 0.2s, color 0.2s;
+                    cursor: pointer;
+                }
+                .btn-signup:hover {
+                    background: #bbdefb;
+                    color: #1565c0;
+                }
+                .alert {
+                    padding: 13px 18px;
+                    border-radius: 7px;
+                    margin-bottom: 18px;
+                    font-weight: 500;
+                    font-size: 1rem;
+                    box-shadow: 0 2px 8px rgba(33,150,243,0.07);
+                }
+                .alert-error {
+                    background: #fdecea;
+                    color: #c62828;
+                    border: 1px solid #f44336;
+                }
+                .alert-success {
+                    background: #e3f2fd;
+                    color: #1976d2;
+                    border: 1px solid #2196f3;
+                }
+                .modal-signup {
+                    display: none;
+                    position: fixed;
+                    top: 0; left: 0;
+                    width: 100vw; height: 100vh;
+                    background: linear-gradient(135deg, #e3f2fd 0%, #2196f3 100%);
+                    z-index: 9999;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .modal-signup.show {
+                    display: flex;
+                }
+                .modal-signup-content {
+                    background: rgba(255,255,255,0.98);
+                    border-radius: 18px;
+                    box-shadow: 0 8px 32px rgba(33,150,243,0.08);
+                    max-width: 400px;
+                    width: 100%;
+                    padding: 40px 32px 32px 32px;
+                    position: relative;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+            </style>
+            <div class="login-center-wrapper">
+                <div class="login-card">
+                    <div class="login-title">Connexion à Wakhtaan</div>
+                    <div class="login-subtitle">Bienvenue, veuillez vous connecter pour accéder à votre espace.</div>
+                    <?php if ($error): ?>
+                        <div class="alert alert-error">
+                            <strong>Erreur :</strong> <?= htmlspecialchars($error) ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($success): ?>
+                        <div class="alert alert-success">
+                            <strong>Succès :</strong> <?= htmlspecialchars($success) ?>
+                        </div>
+                    <?php endif; ?>
+                    <form method="POST" id="login-form" autocomplete="off">
+                        <input type="hidden" name="action" value="login">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                class="form-control" 
+                                placeholder="votre.email@example.com"
+                                value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Mot de passe</label>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                class="form-control" 
+                                placeholder="Votre mot de passe"
+                                required
+                            >
+                        </div>
+                        <button type="submit" class="btn-login">Se connecter</button>
+                        <button type="button" class="btn-signup" id="open-signup-modal">Inscription</button>
+                    </form>
                 </div>
-
-                <?php if ($error): ?>
-                    <div class="alert alert-error">
-                        <strong>Erreur :</strong> <?= htmlspecialchars($error) ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($success): ?>
-                    <div class="alert alert-success">
-                        <strong>Succès :</strong> <?= htmlspecialchars($success) ?>
-                    </div>
-                <?php endif; ?>
-
-                <form method="POST" id="login-form">
-                    <input type="hidden" name="action" value="login">
-                    
-                    <div class="form-group">
-                        <label for="email">Email :</label>
-                        <input 
-                            type="email" 
-                            id="email" 
-                            name="email" 
-                            class="form-control" 
-                            placeholder="votre.email@example.com"
-                            value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
-                            required
-                        >
-                    </div>
-
-                    <div class="form-group">
-                        <label for="password">Mot de passe :</label>
-                        <input 
-                            type="password" 
-                            id="password" 
-                            name="password" 
-                            class="form-control" 
-                            placeholder="Votre mot de passe"
-                            required
-                        >
-                    </div>
-
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">
-                            Se connecter
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Information sur la création de contact -->
-                <div class="card" style="margin-top: 20px;">
-                    <div class="card-header">
-                        👥 Créer des contacts
-                    </div>
-                    <div class="card-body">
-                        <p style="color: #667781; margin: 0;">
-                            Connectez-vous pour pouvoir créer et gérer vos contacts directement depuis cette page.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Comptes de démonstration -->
-                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-                    <h4 style="color: #54656f; margin-bottom: 10px;">🔑 Comptes de démonstration</h4>
-                    <div style="font-size: 13px; color: #667781;">
-                        <strong>👨‍💼 Admin:</strong> admin@whatsapp.com / admin123<br>
-                        <strong>🎪 Demo:</strong> demo@whatsapp.com / demo123<br>
-                        <strong>🧪 Test:</strong> test@whatsapp.com / test123<br>
-                        <strong>🔬 Alice:</strong> alice@test.com / password123
-                    </div>
-                </div>
-
-                <!-- Statistiques système -->
-                <div class="card" style="margin-top: 30px;">
-                    <div class="card-header">
-                        📊 Statistiques de la plateforme
-                    </div>
-                    <div class="card-body">
-                        <?php
-                        try {
-                            $stats = $userService->getUserStats();
-                            ?>
-                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; text-align: center;">
-                                <div>
-                                    <strong style="color: #00a884; font-size: 24px;"><?= $stats['total_users'] ?></strong>
-                                    <br><small>Utilisateurs</small>
-                                </div>
-                                <div>
-                                    <strong style="color: #00a884; font-size: 24px;"><?= $stats['active_users'] ?></strong>
-                                    <br><small>Actifs</small>
-                                </div>
+            </div>
+            <!-- Modale d'inscription -->
+            <div class="modal-signup" id="modal-signup">
+                <div class="modal-signup-content">
+                    <button type="button" id="close-signup-modal" style="position:absolute; top:12px; right:16px; background:none; border:none; font-size:22px; color:#1976d2; cursor:pointer;">&times;</button>
+                    <div class="login-title" style="margin-bottom: 6px;">Créer un compte</div>
+                    <div class="login-subtitle" style="margin-bottom: 22px;">Remplissez les informations pour vous inscrire.</div>
+                    <form method="POST" id="signup-form" autocomplete="off">
+                        <input type="hidden" name="action" value="register">
+                        <?php if ($signup_error): ?>
+                            <div class="alert alert-error">
+                                <strong>Erreur :</strong> <?= htmlspecialchars($signup_error) ?>
                             </div>
-                            <?php
-                        } catch (Exception $e) {
-                            echo '<p style="text-align: center; color: #667781;">Statistiques non disponibles</p>';
-                        }
-                        ?>
-                    </div>
-                </div>
-
-                <!-- Informations techniques -->
-                <div style="margin-top: 30px; text-align: center;">
-                    <h3 style="color: #54656f; margin-bottom: 15px;">🛠️ Technologies utilisées</h3>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 12px;">
-                        <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                            <strong>Backend</strong><br>
-                            PHP 8.0+<br>
-                            SimpleXML<br>
-                            XML + XSD
+                        <?php endif; ?>
+                        <?php if ($signup_success): ?>
+                            <div class="alert alert-success" style="max-width: 400px; margin: 30px auto 0 auto;">
+                                <strong>Inscription réussie !</strong> Vous pouvez maintenant vous connecter.
+                            </div>
+                            <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                // Fermer la modale d'inscription si succès
+                                var modalSignup = document.getElementById('modal-signup');
+                                if (modalSignup) {
+                                    setTimeout(function() { modalSignup.classList.remove('show'); }, 1200);
+                                }
+                            });
+                            </script>
+                        <?php endif; ?>
+                        <div class="form-group">
+                            <label for="signup_name">Nom complet</label>
+                            <input type="text" id="signup_name" name="signup_name" class="form-control" placeholder="Votre nom complet" required value="<?= htmlspecialchars($_POST['signup_name'] ?? '') ?>">
                         </div>
-                        <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                            <strong>Frontend</strong><br>
-                            HTML5<br>
-                            CSS3<br>
-                            JavaScript ES6
+                        <div class="form-group">
+                            <label for="signup_email">Email</label>
+                            <input type="email" id="signup_email" name="signup_email" class="form-control" placeholder="votre.email@example.com" required value="<?= htmlspecialchars($_POST['signup_email'] ?? '') ?>">
                         </div>
-                        <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                            <strong>Architecture</strong><br>
-                            MVC Pattern<br>
-                            Repository Pattern<br>
-                            Service Layer
+                        <div class="form-group">
+                            <label for="signup_password">Mot de passe</label>
+                            <input type="password" id="signup_password" name="signup_password" class="form-control" placeholder="Mot de passe" required minlength="6">
                         </div>
-                    </div>
-                </div>
-
-                <!-- Crédits académiques -->
-                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 6px; text-align: center;">
-                    <h4 style="color: #54656f; margin-bottom: 10px;">🎓 Projet Académique</h4>
-                    <p style="margin: 0; font-size: 14px; color: #667781;">
-                        <strong>Master en Génie Logiciel</strong><br>
-                        UCAD/DGI/ESP - Professeur Ibrahima FALL<br>
-                        Année académique 2024-2025
-                    </p>
+                        <div class="form-group">
+                            <label for="signup_password_confirm">Confirmer le mot de passe</label>
+                            <input type="password" id="signup_password_confirm" name="signup_password_confirm" class="form-control" placeholder="Confirmez le mot de passe" required minlength="6">
+                        </div>
+                        <button type="submit" class="btn-login" style="margin-bottom: 8px;">Créer mon compte</button>
+                        <button type="button" class="btn-signup" id="cancel-signup-modal">Annuler</button>
+                    </form>
                 </div>
             </div>
         <?php endif; ?>
@@ -502,6 +662,28 @@ if (isset($_SESSION['user_id'])) {
                         contactNameInput.value = 'Test';
                     }
                 });
+            }
+        });
+    </script>
+    <script>
+        // JS pour ouvrir/fermer la modale d'inscription
+        const openSignupBtn = document.getElementById('open-signup-modal');
+        const modalSignup = document.getElementById('modal-signup');
+        const closeSignupBtn = document.getElementById('close-signup-modal');
+        const cancelSignupBtn = document.getElementById('cancel-signup-modal');
+
+        openSignupBtn.addEventListener('click', function() {
+            modalSignup.classList.add('show');
+        });
+        closeSignupBtn.addEventListener('click', function() {
+            modalSignup.classList.remove('show');
+        });
+        cancelSignupBtn.addEventListener('click', function() {
+            modalSignup.classList.remove('show');
+        });
+        window.addEventListener('click', function(e) {
+            if (e.target === modalSignup) {
+                modalSignup.classList.remove('show');
             }
         });
     </script>

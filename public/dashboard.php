@@ -1,6 +1,6 @@
 <?php
 /**
- * WhatsApp Web Clone - Dashboard Principal
+ * Wakhtaan - Dashboard Principal
  * Interface principale avec navigation vers toutes les fonctionnalités
  */
 
@@ -30,7 +30,7 @@ $messageRepo = new MessageRepository($xmlManager);
 
 // Variables
 $currentUser = $userService->findUserById($_SESSION['user_id']);
-$pageTitle = "Dashboard - WhatsApp Web";
+$pageTitle = "Dashboard - Wakhtaan";
 $error = '';
 $success = '';
 
@@ -82,7 +82,7 @@ try {
         <!-- Sidebar Navigation -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <h2>💬 WhatsApp Web</h2>
+                <h2>💬 Wakhtaan</h2>
                 <p>Bienvenue <?= htmlspecialchars($currentUser ? $currentUser->getName() : 'Utilisateur') ?></p>
             </div>
             
@@ -102,9 +102,7 @@ try {
                 <a href="profile.php" class="nav-item">
                     ⚙️ Mon Profil
                 </a>
-                <a href="index.php?action=logout" class="nav-item" onclick="return confirm('Êtes-vous sûr de vouloir vous déconnecter ?')">
-                    🚪 Déconnexion
-                </a>
+                <a href="index.php?action=logout" class="nav-item">🚪 Déconnexion</a>
             </nav>
         </div>
 
@@ -132,7 +130,7 @@ try {
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
                     <div class="card">
                         <div class="card-body" style="text-align: center;">
-                            <h3 style="color: #00a884; font-size: 36px; margin: 0;"><?= $stats['contacts'] ?></h3>
+                            <h3 style="color: #2196f3; font-size: 36px; margin: 0;"><?= $stats['contacts'] ?></h3>
                             <p style="margin: 5px 0; color: #667781;">Contacts</p>
                             <a href="contacts.php" class="btn btn-primary btn-sm">Gérer</a>
                         </div>
@@ -140,7 +138,7 @@ try {
 
                     <div class="card">
                         <div class="card-body" style="text-align: center;">
-                            <h3 style="color: #00a884; font-size: 36px; margin: 0;"><?= $stats['groups'] ?></h3>
+                            <h3 style="color: #2196f3; font-size: 36px; margin: 0;"><?= $stats['groups'] ?></h3>
                             <p style="margin: 5px 0; color: #667781;">Groupes</p>
                             <a href="groups.php" class="btn btn-primary btn-sm">Gérer</a>
                         </div>
@@ -148,7 +146,7 @@ try {
 
                     <div class="card">
                         <div class="card-body" style="text-align: center;">
-                            <h3 style="color: #00a884; font-size: 36px; margin: 0;"><?= $stats['messages_sent'] ?></h3>
+                            <h3 style="color: #2196f3; font-size: 36px; margin: 0;"><?= $stats['messages_sent'] ?></h3>
                             <p style="margin: 5px 0; color: #667781;">Messages envoyés</p>
                             <a href="chat.php" class="btn btn-primary btn-sm">Écrire</a>
                         </div>
@@ -156,7 +154,7 @@ try {
 
                     <div class="card">
                         <div class="card-body" style="text-align: center;">
-                            <h3 style="color: #00a884; font-size: 36px; margin: 0;"><?= $stats['messages_received'] ?></h3>
+                            <h3 style="color: #2196f3; font-size: 36px; margin: 0;"><?= $stats['messages_received'] ?></h3>
                             <p style="margin: 5px 0; color: #667781;">Messages reçus</p>
                             <a href="chat.php" class="btn btn-primary btn-sm">Lire</a>
                         </div>

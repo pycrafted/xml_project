@@ -231,56 +231,10 @@ const AlertManager = {
         localStorage.setItem('whatsapp_persistent_alerts', JSON.stringify(persistentAlerts));
     },
     
-    // Afficher les alertes sauvegardées au rechargement
+    // Afficher les alertes sauvegardées au rechargement (désactivé)
     showPersistentAlerts: function() {
-        const persistentAlerts = JSON.parse(localStorage.getItem('whatsapp_persistent_alerts') || '[]');
-        if (persistentAlerts.length === 0) return;
-        
-        // Créer une section spéciale pour les alertes persistantes
-        const persistentSection = document.createElement('div');
-        persistentSection.id = 'persistent-alerts-section';
-        persistentSection.innerHTML = `
-            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 10px 0; border-radius: 4px;">
-                <h4 style="margin: 0 0 10px 0; color: #856404;">
-                    🔄 Alertes Récupérées (${persistentAlerts.length})
-                    <button onclick="AlertManager.clearPersistentAlerts()" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">
-                        🗑️ Effacer
-                    </button>
-                </h4>
-                <div id="persistent-alerts-content"></div>
-            </div>
-        `;
-        
-        const container = document.querySelector('.content-body') || document.body;
-        container.insertBefore(persistentSection, container.firstChild);
-        
-        // Afficher chaque alerte persistante
-        const content = document.getElementById('persistent-alerts-content');
-        persistentAlerts.forEach(alert => {
-            const alertDiv = document.createElement('div');
-            alertDiv.style.cssText = `
-                background: ${alert.type === 'error' ? '#f8d7da' : alert.type === 'success' ? '#d4edda' : '#d1ecf1'};
-                color: ${alert.type === 'error' ? '#721c24' : alert.type === 'success' ? '#155724' : '#0c5460'};
-                border: 1px solid ${alert.type === 'error' ? '#f5c6cb' : alert.type === 'success' ? '#c3e6cb' : '#b8daff'};
-                padding: 8px 12px;
-                margin: 5px 0;
-                border-radius: 4px;
-                font-size: 13px;
-                border-left: 4px solid #ff6b6b;
-            `;
-            
-            const timeAgo = this.getTimeAgo(alert.timestamp);
-            alertDiv.innerHTML = `
-                <strong>${alert.type === 'error' ? '❌' : alert.type === 'success' ? '✅' : '💡'}</strong>
-                ${alert.message}
-                <div style="font-size: 11px; opacity: 0.7; margin-top: 5px;">
-                    ⏰ ${timeAgo} | 📍 ${alert.url}
-                </div>
-            `;
-            content.appendChild(alertDiv);
-        });
-        
-        console.log(`📋 ${persistentAlerts.length} alertes persistantes récupérées`);
+        // Désactivé : ne rien faire
+        return;
     },
     
     // Vider les alertes persistantes

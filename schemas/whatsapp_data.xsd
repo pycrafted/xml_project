@@ -22,6 +22,7 @@
                                                     <xs:element name="theme" type="xs:string" minOccurs="0"/>
                                                     <xs:element name="notifications" type="xs:string" minOccurs="0"/>
                                                     <xs:element name="language" type="xs:string" minOccurs="0"/>
+                                                    <xs:element name="password_hash" type="xs:string" minOccurs="0"/>
                                                 </xs:sequence>
                                             </xs:complexType>
                                         </xs:element>

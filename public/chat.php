@@ -136,7 +136,7 @@ try {
         }
         
         .conversation-item.active {
-            background: #00a884;
+            background: #2196f3;
             color: white;
         }
         
@@ -501,5 +501,4 @@ try {
         });
     </script>
 </body>
-</html> 
 </html> 

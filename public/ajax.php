@@ -19,9 +19,31 @@ session_start();
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 
+// Désactiver l'affichage des erreurs PHP dans la sortie (optionnel, mais recommandé en prod)
+ini_set('display_errors', 0);
+error_reporting(E_ERROR | E_PARSE);
+
 // Fonction de logging simple
 function debugLog($message) {
-    file_put_contents('../logs/app.log', date('Y-m-d H:i:s') . " [DEBUG] " . $message . "\n", FILE_APPEND);
+    $logDir = __DIR__ . '/../logs';
+    $logFile = $logDir . '/app.log';
+    // Créer le dossier s'il n'existe pas
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0777, true);
+    }
+    // Écrire dans le fichier log, ignorer toute erreur
+    @file_put_contents($logFile, date('Y-m-d H:i:s') . " [DEBUG] " . $message . "\n", FILE_APPEND);
+}
+
+// Fonction de log warning
+function logWarning($message, $context = []) {
+    $logDir = __DIR__ . '/../logs';
+    $logFile = $logDir . '/app.log';
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0777, true);
+    }
+    $contextStr = !empty($context) ? json_encode($context) : '';
+    @file_put_contents($logFile, date('Y-m-d H:i:s') . " [WARNING] " . $message . ($contextStr ? ' ' . $contextStr : '') . "\n", FILE_APPEND);
 }
 
 debugLog("AJAX Request: " . json_encode([

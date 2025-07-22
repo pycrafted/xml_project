@@ -249,7 +249,9 @@ class XMLManager
                 // Vérifier si c'est un tableau d'éléments avec attributs
                 if (is_numeric($key)) {
                     // C'est un élément avec attributs
-                    $childElement = $this->dom->createElementNS(self::NAMESPACE_URI, $element->parentNode->nodeName);
+                    $parentNode = $element->parentNode;
+                    $nodeName = $parentNode && property_exists($parentNode, 'nodeName') ? $parentNode->nodeName : 'setting';
+                    $childElement = $this->dom->createElementNS(self::NAMESPACE_URI, $nodeName);
                     
                     if (isset($value['attributes'])) {
                         foreach ($value['attributes'] as $attr => $attrValue) {
@@ -282,7 +284,7 @@ class XMLManager
                         $element->appendChild($childElement);
                     }
                 }
-            } else {
+            } else if ($value !== null && $value !== '') {
                 $childElement = $this->dom->createElementNS(self::NAMESPACE_URI, $key, htmlspecialchars($value));
                 $element->appendChild($childElement);
             }

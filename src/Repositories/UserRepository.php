@@ -29,14 +29,22 @@ class UserRepository
      */
     public function create(User $user): bool
     {
+        $settingsArr = [];
+        foreach ($user->getSettings() as $key => $value) {
+            // Si c'est le mot de passe hashé, stocker comme <password_hash>...</password_hash>
+            if ($key === 'password_hash') {
+                $settingsArr['password_hash'] = $value;
+            } else {
+                $settingsArr[$key] = $value;
+            }
+        }
         $userData = [
             'attributes' => ['id' => $user->getId()],
             'name' => $user->getName(),
             'email' => $user->getEmail(),
             'status' => $user->getStatus(),
-            'settings' => $this->settingsToArray($user->getSettings())
+            'settings' => $settingsArr
         ];
-
         return $this->xmlManager->addElement('//wa:users', 'user', $userData);
     }
 
@@ -95,14 +103,15 @@ class UserRepository
                         $settings = [];
                         $settingsNode = $userXml->children($defaultNS)->settings;
                         if ($settingsNode) {
-                            $settingNodes = $settingsNode->children($defaultNS);
-                            foreach ($settingNodes as $setting) {
-                                $settingAttrs = $setting->attributes();
-                                $key = (string) $settingAttrs['key'];
-                                $value = (string) $settingAttrs['value'];
-                                if (!empty($key)) {
-                                    $settings[$key] = $value;
+                            // Lire les settings classiques
+                            foreach (["theme","notifications","language"] as $skey) {
+                                if (isset($settingsNode->$skey)) {
+                                    $settings[$skey] = (string)$settingsNode->$skey;
                                 }
+                            }
+                            // Lire le password_hash
+                            if (isset($settingsNode->password_hash)) {
+                                $settings['password_hash'] = (string)$settingsNode->password_hash;
                             }
                         }
                         $user->setSettings($settings);
